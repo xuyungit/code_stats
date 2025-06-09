@@ -65,7 +65,7 @@ python git_stats.py /path/to/repo
 python git_stats.py /path/to/repo --days N
 ```
 
-### Web Service (MVP Status: Complete ✅)
+### Full-Stack Web Application (Status: Complete ✅)
 
 Virtual environment is at .venv directory of the workspace
 ```bash
@@ -73,15 +73,41 @@ Virtual environment is at .venv directory of the workspace
 uv sync
 uv run uvicorn backend.app.main:app --reload --port 8002
 
-# API documentation at http://localhost:8002/docs
+# Access web application at http://localhost:8002
+# API documentation at http://localhost:8002/api/docs
 ```
 
+#### Technology Stack:
+- **Backend**: FastAPI + SQLAlchemy + SQLite + JWT authentication
+- **Frontend**: Vue 3 + TypeScript + Tailwind CSS + Chart.js + Vite
+- **Integration**: FastAPI serves Vue SPA with API routes prefixed with `/api/`
+
+#### Features Available:
+- **Authentication**: User registration and login with JWT tokens
+- **Repository Management**: Add, view, analyze, and delete Git repositories  
+- **Statistics Dashboard**: Interactive charts and visualizations of commit activity
+- **Real-time Analysis**: Trigger Git analysis and view results immediately
+- **Responsive Design**: Modern, clean UI that works on desktop and mobile
+
 #### API Endpoints Available:
-- **Authentication**: `/auth/register`, `/auth/login`, `/auth/me`
-- **Repositories**: `/repositories/` (CRUD operations)
-- **Statistics**: `/repositories/{id}/stats/period`, `/stats/daily`, `/stats/authors`
-- **Analysis**: `/repositories/{id}/analyze` (trigger git analysis)
-- **Jobs**: `/repositories/{id}/jobs` (track analysis status)
+- **Authentication**: `/api/auth/register`, `/api/auth/login`, `/api/auth/me`
+- **Repositories**: `/api/repositories/` (CRUD operations)
+- **Statistics**: `/api/repositories/{id}/stats/period`, `/api/repositories/{id}/stats/daily`, `/api/repositories/{id}/stats/authors`
+- **Analysis**: `/api/repositories/{id}/analyze` (trigger git analysis)
+- **Jobs**: `/api/repositories/{id}/jobs` (track analysis status)
+
+#### Testing:
+```bash
+# Run full-stack end-to-end regression test
+python test_fullstack.py
+
+# Test covers complete workflow:
+# - API health checks and frontend serving
+# - User registration and authentication
+# - Repository CRUD operations
+# - Git analysis triggering and completion
+# - Statistics retrieval and validation
+```
 
 ## Development Guidelines
 

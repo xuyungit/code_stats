@@ -1,99 +1,185 @@
-<!-- filepath: /Users/xuyun/AI/code_stats/README.md -->
 # Code Stats
 
 ## Overview
 
-This project provides a Python script (`git_stats.py`) to analyze Git repository activity. It calculates and displays statistics such as the number of commits, files changed, lines added, and lines deleted over a specified period. The primary use case is to get a daily breakdown of development activity for the last N days.
+Code Stats is a full-stack web application for analyzing Git repository activity. Originally a command-line tool, it has evolved into a multi-user web service that provides detailed statistics about development activity including commits, lines of code changes, and author contributions over time.
+
+The application features a modern Vue.js frontend with interactive charts and a FastAPI backend with JWT authentication and SQLite database storage.
 
 ## Features
 
-- **Daily Statistics:** Provides a day-by-day summary of Git activity.
-- **Configurable Period:** Allows specifying the number of recent days to analyze.
-- **Detailed Metrics:** For each day, shows:
+### Web Application
+- **Multi-User Support:** User registration and authentication with JWT tokens
+- **Repository Management:** Add, analyze, and manage multiple Git repositories
+- **Interactive Dashboard:** Visual charts showing development activity over time
+- **Real-time Analysis:** Trigger Git analysis and view results immediately
+- **Author Tracking:** Separate tracking of Git authors vs system users
+- **Responsive Design:** Modern UI that works on desktop and mobile
+
+### Analysis Capabilities
+- **Daily Statistics:** Day-by-day breakdown of Git activity
+- **Period Analysis:** Configurable time ranges (7, 14, 30, 90 days)
+- **Detailed Metrics:** For each period, shows:
   - Number of commits
-  - Number of files changed
-  - Number of lines added
-  - Number of lines deleted
-  - Net line change
-  - Total line activity (added + deleted)
-- **Handles Various Git States:** Designed to work correctly with repositories in different states (e.g., new repositories, repositories with activity only within the queried period).
+  - Number of files changed  
+  - Number of lines added/deleted
+  - Net line changes
+  - Author contributions
+- **Manual AI Coder Flagging:** Mark authors as AI-generated code contributors
+
+## Technology Stack
+
+- **Backend:** FastAPI + SQLAlchemy + SQLite + JWT authentication
+- **Frontend:** Vue 3 + TypeScript + Tailwind CSS + Chart.js + Vite
+- **Package Management:** uv for Python, npm for Node.js
+- **Database:** SQLite (development) with migration path to PostgreSQL
 
 ## Requirements
 
 - Python 3.13+
-- Git installed and accessible in your system's PATH.
+- Node.js 18+ and npm
+- Git installed and accessible in your system's PATH
+- uv package manager for Python dependencies
+
+## Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd code_stats
+
+# Install Python dependencies
+uv sync
+
+# Install frontend dependencies
+cd frontend
+npm install
+cd ..
+```
 
 ## Usage
 
-The script is run from the command line.
+### Development Environment
+
+Choose one of these approaches for frontend development:
+
+#### Option 1: Separate Development Servers (Recommended for active frontend development)
+
+```bash
+# Terminal 1: Start backend server
+uv run uvicorn backend.app.main:app --reload --port 8002
+
+# Terminal 2: Start frontend development server with hot-reload
+cd frontend
+npm run dev
+```
+
+- Frontend with hot-reload: `http://localhost:5173`
+- Backend API: `http://localhost:8002`
+- API docs: `http://localhost:8002/api/docs`
+
+**Note:** This requires proxy configuration in `vite.config.ts` to forward API calls from port 5173 to 8002.
+
+#### Option 2: Integrated Serving (Current setup)
+
+```bash
+# Build frontend for production
+cd frontend
+npm run build
+cd ..
+
+# Start backend (serves built frontend)
+uv run uvicorn backend.app.main:app --reload --port 8002
+```
+
+- Full application: `http://localhost:8002`
+- API docs: `http://localhost:8002/api/docs`
+
+### Production Environment
+
+```bash
+# Build optimized frontend
+cd frontend
+npm run build
+cd ..
+
+# Start production server
+uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8002
+```
+
+### Legacy CLI Tool
+
+The original command-line interface is still available:
 
 ```bash
 python git_stats.py <repo_path> [--days N]
 ```
 
-**Arguments:**
-
-- `repo_path`: (Required) The absolute or relative path to the Git repository you want to analyze.
-- `--days N`: (Optional) The number of recent days for which to show daily statistics. Defaults to 7.
-
-**Example:**
-
-To analyze the last 7 days of activity in a repository located at `/path/to/your/repo`:
-
-```bash
-python git_stats.py /path/to/your/repo
-```
-
-To analyze the last 30 days of activity:
-
+Example:
 ```bash
 python git_stats.py /path/to/your/repo --days 30
 ```
 
-## How it Works
+## Testing
 
-The `git_stats.py` script performs the following main steps:
+Run the full-stack integration test to verify everything is working:
 
-1. **Parses Arguments:** Reads the repository path and the number of days for analysis.
-2. **Validates Repository:** Checks if the provided path is a valid Git repository.
-3. **Iterates Through Days:** For each day in the specified range (from today backwards):
-   - Determines the start and end timestamps for that specific day.
-   - Uses `git log` to find commits made within that day.
-   - If commits are found:
-     - It identifies the first and last commit of that day.
-     - It determines the state of the repository *before* the first commit of the day (either the parent of the first commit or the empty tree hash for initial commits).
-     - It uses `git diff --shortstat` to compare the state before the first commit of the day with the state at the last commit of the day. This provides the lines added/deleted and files changed *specifically for that day's activity*.
-   - If no commits are found for a day, it reports no activity.
-4. **Prints Statistics:** Outputs the collected statistics for each day in a readable format.
+```bash
+# Start the server first
+uv run uvicorn backend.app.main:app --reload --port 8002
 
-The script relies on `subprocess` to execute Git commands and parses their output.
-
-## `pyproject.toml`
-
-The `pyproject.toml` file is configured for a basic Python project using modern packaging standards.
-
-```toml
-[project]
-name = "code-stats"
-version = "0.1.0"
-description = "A Python utility to get daily Git statistics for a repository."
-readme = "README.md"
-requires-python = ">=3.13"
-dependencies = [] # No external dependencies
+# In another terminal, run the test
+python test_fullstack.py
 ```
 
-## Future Enhancements (Potential)
+The test covers:
+- API health checks and frontend serving
+- User registration and authentication  
+- Repository CRUD operations
+- Git analysis triggering and completion
+- Statistics retrieval and validation
 
-- Aggregate statistics for the entire period (in addition to daily).
-- Support for specific date ranges (not just "last N days").
-- Author-specific statistics.
-- Output in different formats (e.g., CSV, JSON).
-- Ignoring specific files or directories from stats.
+## Architecture
 
-## Contribution
+### Backend (FastAPI)
+- **Models**: SQLAlchemy models for Users, Repositories, Authors, and DailyAuthorStats
+- **Authentication**: JWT-based user authentication and authorization
+- **API Routes**: RESTful endpoints for all operations
+- **Git Analysis**: Integrates existing CLI analysis logic with web service
+- **Database**: Day-based atomic storage with calculated aggregations
 
-Feel free to fork the repository, make improvements, and submit pull requests.
+### Frontend (Vue 3)
+- **Authentication**: Login/register forms with JWT token management
+- **Dashboard**: Overview with repository stats and quick actions
+- **Repository Management**: CRUD interface for Git repositories
+- **Statistics Visualization**: Interactive charts using Chart.js
+- **Responsive Design**: Tailwind CSS for modern, mobile-friendly UI
+
+### Data Model
+- **Day-based Storage**: Only daily author statistics are stored in the database
+- **Calculated Aggregations**: All period and summary statistics are computed from daily data
+- **User/Author Separation**: System users are separate from Git commit authors
+- **Manual AI Flagging**: Authors can be manually marked as AI-generated code
+
+## API Documentation
+
+When the server is running, visit `http://localhost:8002/api/docs` for interactive API documentation with Swagger UI.
+
+## Development Notes
+
+- The original CLI tool (`git_stats.py`) remains functional for backwards compatibility
+- The web service adapts the existing Git analysis logic for multi-user database storage
+- Frontend build artifacts are served directly by FastAPI for simple deployment
+- Database migrations are handled automatically on server startup
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run the integration test to ensure everything works
+5. Submit a pull request
 
 ## License
 
-This project is open-source. (Please add a specific license file if desired, e.g., MIT, Apache 2.0).
+This project is open-source. Please add a specific license file if desired (e.g., MIT, Apache 2.0).
