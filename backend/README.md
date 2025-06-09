@@ -36,15 +36,20 @@ python -c "from app.core.migration_manager import migration_manager; migration_m
 ### 4. Start Development Server
 
 ```bash
-python app/run.py
+# From workspace root
+uv run uvicorn backend.app.main:app --reload --port 8002
+
+# Or from backend directory
+cd backend
+uv run uvicorn app.main:app --reload --port 8002
 ```
 
-The API will be available at `http://localhost:8000`
+The API will be available at `http://localhost:8002`
 
 ### 5. View API Documentation
 
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+- Swagger UI: `http://localhost:8002/docs`
+- ReDoc: `http://localhost:8002/redoc`
 
 ## API Endpoints
 
