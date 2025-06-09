@@ -1,14 +1,8 @@
 <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background -->
-  <rect width="32" height="32" fill="#1e293b" rx="4"/>
-  
   <!-- Chart bars representing code stats -->
   <rect x="4" y="20" width="4" height="8" fill="#22c55e"/>
   <rect x="10" y="16" width="4" height="12" fill="#3b82f6"/>
   <rect x="16" y="12" width="4" height="16" fill="#f59e0b"/>
   <rect x="22" y="18" width="4" height="10" fill="#ef4444"/>
-  
-  <!-- Git/code symbol -->
-  <circle cx="28" cy="6" r="2" fill="#22c55e"/>
-  <path d="M24 8 L28 4 L28 8 Z" fill="#22c55e"/>
+  <rect x="26" y="14" width="4" height="14" fill="#10b981"/>
 </svg>
