@@ -2,21 +2,21 @@
   <AppLayout>
     <div class="px-4 py-6 sm:px-0">
       <div class="border-4 border-dashed border-gray-200 rounded-lg p-6">
-        <h1 class="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Dashboard</h1>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <!-- Quick Stats Cards -->
           <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
+            <div class="p-6">
               <div class="flex items-center">
                 <div class="flex-shrink-0">
                   <div class="w-8 h-8 bg-indigo-500 rounded-md flex items-center justify-center">
                     <span class="text-white text-sm font-medium">R</span>
                   </div>
                 </div>
-                <div class="ml-5 w-0 flex-1">
+                <div class="ml-8 w-0 flex-1">
                   <dl>
-                    <dt class="text-sm font-medium text-gray-500 truncate">
+                    <dt class="text-sm font-semibold text-gray-700 truncate">
                       Total Repositories
                     </dt>
                     <dd class="text-lg font-medium text-gray-900">
@@ -38,7 +38,7 @@
                 </div>
                 <div class="ml-5 w-0 flex-1">
                   <dl>
-                    <dt class="text-sm font-medium text-gray-500 truncate">
+                    <dt class="text-sm font-semibold text-gray-700 truncate">
                       Analyzed Today
                     </dt>
                     <dd class="text-lg font-medium text-gray-900">
@@ -60,7 +60,7 @@
                 </div>
                 <div class="ml-5 w-0 flex-1">
                   <dl>
-                    <dt class="text-sm font-medium text-gray-500 truncate">
+                    <dt class="text-sm font-semibold text-gray-700 truncate">
                       Lines This Week
                     </dt>
                     <dd class="text-lg font-medium text-gray-900">
@@ -74,11 +74,11 @@
         </div>
 
         <!-- Recent Repositories -->
-        <div class="mt-8">
+        <div class="mt-12">
           <h2 class="text-lg font-medium text-gray-900 mb-4">Recent Repositories</h2>
           <div class="bg-white shadow overflow-hidden sm:rounded-md">
             <ul role="list" class="divide-y divide-gray-200">
-              <li v-for="repo in repositories.slice(0, 5)" :key="repo.id" class="px-6 py-4">
+              <li v-for="repo in repositories.slice(0, 5)" :key="repo.id" class="px-8 py-6">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center">
                     <div class="flex-shrink-0 h-10 w-10">
@@ -88,7 +88,7 @@
                         </span>
                       </div>
                     </div>
-                    <div class="ml-4">
+                    <div class="ml-6">
                       <div class="text-sm font-medium text-gray-900">{{ repo.name }}</div>
                       <div class="text-sm text-gray-500">{{ repo.local_path }}</div>
                     </div>

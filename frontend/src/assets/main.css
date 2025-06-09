@@ -1,2 +1,8 @@
-@import './base.css';
 @import "tailwindcss";
+
+/* Custom styles for better professional spacing */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

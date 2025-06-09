@@ -75,7 +75,7 @@
         <!-- Repositories List -->
         <div class="bg-white shadow overflow-hidden sm:rounded-md">
           <ul role="list" class="divide-y divide-gray-200">
-            <li v-for="repo in repositories" :key="repo.id" class="px-6 py-4">
+            <li v-for="repo in repositories" :key="repo.id" class="px-8 py-6">
               <div class="flex items-center justify-between">
                 <div class="flex items-center">
                   <div class="flex-shrink-0 h-10 w-10">
@@ -85,13 +85,13 @@
                       </span>
                     </div>
                   </div>
-                  <div class="ml-4">
+                  <div class="ml-6">
                     <div class="text-sm font-medium text-gray-900">{{ repo.name }}</div>
                     <div class="text-sm text-gray-500">{{ repo.local_path }}</div>
                     <div v-if="repo.description" class="text-sm text-gray-400">{{ repo.description }}</div>
                   </div>
                 </div>
-                <div class="flex items-center space-x-2">
+                <div class="flex items-center space-x-6">
                   <span class="text-sm text-gray-500">
                     {{ repo.last_analyzed_at ? `Last analyzed: ${formatDate(repo.last_analyzed_at)}` : 'Never analyzed' }}
                   </span>
