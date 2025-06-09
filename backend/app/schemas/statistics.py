@@ -66,6 +66,34 @@ class AuthorBreakdownResponse(BaseModel):
         from_attributes = True
 
 
+class AuthorDailyContribution(BaseModel):
+    author_id: int
+    commits_count: int
+    added_lines: int
+    deleted_lines: int
+    files_changed: int
+    
+    class Config:
+        from_attributes = True
+
+
+class DailyStatsWithAuthors(BaseModel):
+    date: date
+    daily_stats: List[AuthorDailyContribution]
+    
+    class Config:
+        from_attributes = True
+
+
+class RepoDailyResponse(BaseModel):
+    daily_stats: List[DailyStatsWithAuthors]
+    date_range: str
+    repositories_included: List[int]
+    
+    class Config:
+        from_attributes = True
+
+
 class AnalysisJobRequest(BaseModel):
     days: Optional[int] = 30
     force_refresh: Optional[bool] = False

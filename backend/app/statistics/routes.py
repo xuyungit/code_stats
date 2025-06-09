@@ -6,7 +6,7 @@ from ..core.models import User, Repository, AnalysisJob
 from ..schemas.statistics import (
     DailyStatsResponse, PeriodStatsResponse, AuthorStatsResponse,
     DailyBreakdownResponse, AuthorBreakdownResponse,
-    AnalysisJobRequest, AnalysisJobResponse
+    AnalysisJobRequest, AnalysisJobResponse, RepoDailyResponse
 )
 from ..auth.dependencies import get_current_user
 from .services import StatisticsService
@@ -223,4 +223,57 @@ async def get_analysis_job(
         error_message=job.error_message,
         records_processed=job.records_processed,
         created_at=job.created_at
+    )
+
+
+# Create a new router for general statistics (not tied to specific repository)
+stats_router = APIRouter(prefix="/stats", tags=["cross-repo-statistics"])
+
+
+@stats_router.get("/repo-daily", response_model=RepoDailyResponse)
+async def get_repo_daily_stats(
+    date_from: date = Query(description="Start date (YYYY-MM-DD)"),
+    date_to: date = Query(description="End date (YYYY-MM-DD)"),
+    repo: str = Query(description="Repository ID or 'all' for all repositories"),
+    exclude_ai: bool = Query(default=False, description="Exclude AI coders from statistics"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get daily statistics with author breakdown for repositories."""
+    
+    # Validate date range
+    if date_to < date_from:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="End date must be after start date"
+        )
+    
+    # Parse repository parameter
+    repo_id = None
+    if repo != "all":
+        try:
+            repo_id = int(repo)
+            # Verify user owns this repository
+            repository = db.query(Repository).filter(
+                Repository.id == repo_id,
+                Repository.user_id == current_user.id
+            ).first()
+            if not repository:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Repository not found"
+                )
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Repository parameter must be 'all' or a valid repository ID"
+            )
+    
+    stats_service = StatisticsService(db)
+    return stats_service.get_repo_daily_stats(
+        user_id=current_user.id,
+        date_from=date_from,
+        date_to=date_to,
+        repo_id=repo_id,
+        exclude_ai=exclude_ai
     )

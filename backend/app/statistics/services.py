@@ -5,7 +5,8 @@ from sqlalchemy import func, and_, distinct
 from ..core.models import Repository, DailyAuthorStats, Author, AnalysisJob
 from ..schemas.statistics import (
     DailyStatsResponse, PeriodStatsResponse, AuthorStatsResponse,
-    DailyBreakdownResponse, AuthorBreakdownResponse
+    DailyBreakdownResponse, AuthorBreakdownResponse, RepoDailyResponse,
+    DailyStatsWithAuthors, AuthorDailyContribution
 )
 
 
@@ -205,3 +206,63 @@ class StatisticsService:
         ).count()
         
         return count > 0
+
+    def get_repo_daily_stats(self, user_id: int, date_from: date, date_to: date, 
+                           repo_id: Optional[int] = None, exclude_ai: bool = False) -> RepoDailyResponse:
+        """Get daily stats with author breakdown for repositories."""
+        
+        # Build base query
+        query = self.db.query(DailyAuthorStats).join(Repository).filter(
+            Repository.user_id == user_id,
+            DailyAuthorStats.date >= date_from,
+            DailyAuthorStats.date <= date_to
+        )
+        
+        # Filter by repository if specified
+        repositories_included = []
+        if repo_id:
+            query = query.filter(DailyAuthorStats.repository_id == repo_id)
+            repositories_included = [repo_id]
+        else:
+            # Get all user's repositories
+            user_repos = self.db.query(Repository).filter(Repository.user_id == user_id).all()
+            repositories_included = [repo.id for repo in user_repos]
+        
+        # Exclude AI coders if requested
+        if exclude_ai:
+            query = query.join(Author).filter(Author.is_ai_coder == False)
+        
+        # Execute query and group by date
+        results = query.all()
+        
+        # Group results by date
+        daily_data = {}
+        for stat in results:
+            stat_date = stat.date
+            if stat_date not in daily_data:
+                daily_data[stat_date] = []
+            
+            daily_data[stat_date].append(AuthorDailyContribution(
+                author_id=stat.author_id,
+                commits_count=stat.commits_count,
+                added_lines=stat.added_lines,
+                deleted_lines=stat.deleted_lines,
+                files_changed=stat.files_changed
+            ))
+        
+        # Create daily stats list
+        daily_stats = []
+        current_date = date_from
+        while current_date <= date_to:
+            authors_stats = daily_data.get(current_date, [])
+            daily_stats.append(DailyStatsWithAuthors(
+                date=current_date,
+                daily_stats=authors_stats
+            ))
+            current_date += timedelta(days=1)
+        
+        return RepoDailyResponse(
+            daily_stats=daily_stats,
+            date_range=f"{date_from} to {date_to}",
+            repositories_included=repositories_included
+        )

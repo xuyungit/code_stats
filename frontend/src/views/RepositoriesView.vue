@@ -197,7 +197,10 @@ const cancelAdd = () => {
 const analyzeRepository = async (repoId: number) => {
   analyzingRepo.value = repoId
   try {
-    await api.post(`/repositories/${repoId}/analyze`)
+    await api.post(`/repositories/${repoId}/analyze`, {
+      days: 30,
+      force_refresh: false
+    })
     // Refresh repositories to get updated last_analyzed_at
     await fetchRepositories()
   } catch (err) {

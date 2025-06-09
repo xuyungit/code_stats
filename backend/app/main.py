@@ -37,8 +37,9 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(repositories_router, prefix="/api")
 
 # Import statistics router after other imports to avoid circular dependencies
-from .statistics.routes import router as statistics_router
+from .statistics.routes import router as statistics_router, stats_router
 app.include_router(statistics_router, prefix="/api")
+app.include_router(stats_router, prefix="/api")
 
 # API routes defined
 @app.get("/api/")

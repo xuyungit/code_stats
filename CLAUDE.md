@@ -6,6 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repository contains a web-based service for analyzing git repository code activity and statistics. Originally a command-line tool, it has been expanded into a multi-user web service with REST API and database storage for tracking development metrics over time.
 
+
 ## Architecture
 
 ### Command-Line Tools (Original)
@@ -32,7 +33,7 @@ This repository contains a web-based service for analyzing git repository code a
 - Multi-user support with JWT authentication
 - Repository management (add, update, delete repositories) 
 - Git analysis integration with job tracking
-- Statistics API (period, daily, author breakdowns)
+- Statistics API (single-repo and cross-repo with flexible filtering)
 - Author tracking separate from system users
 - Manual AI coder flagging capability
 - Day-based atomic storage for flexible aggregation
@@ -49,10 +50,13 @@ This repository contains a web-based service for analyzing git repository code a
 
 ### Key Principles
 - Day-based atomic storage - only daily author stats are stored
-- All period/aggregated statistics are calculated from daily data
+- All period/aggregated statistics are calculated from daily data at query time
 - Clear separation between system users and git authors
 - Manual AI coder flagging (no automatic detection)
 - Database schema versioning with migration support
+- Avoid storing computed fields (net_change, code_activities) to prevent data redundancy
+- Date-indexed API responses for frontend time-series visualization
+- Author ID references only in responses, frontend fetches author details separately
 
 ## Running Tools
 
@@ -92,7 +96,8 @@ uv run uvicorn backend.app.main:app --reload --port 8002
 #### API Endpoints Available:
 - **Authentication**: `/api/auth/register`, `/api/auth/login`, `/api/auth/me`
 - **Repositories**: `/api/repositories/` (CRUD operations)
-- **Statistics**: `/api/repositories/{id}/stats/period`, `/api/repositories/{id}/stats/daily`, `/api/repositories/{id}/stats/authors`
+- **Single-Repo Statistics**: `/api/repositories/{id}/stats/period`, `/api/repositories/{id}/stats/daily`, `/api/repositories/{id}/stats/authors`
+- **Cross-Repo Statistics**: `/api/stats/repo-daily` (unified daily stats with author breakdown)
 - **Analysis**: `/api/repositories/{id}/analyze` (trigger git analysis)
 - **Jobs**: `/api/repositories/{id}/jobs` (track analysis status)
 
@@ -118,12 +123,14 @@ python test_fullstack.py
 
 ### Web Service Specific  
 - Use FastAPI with SQLAlchemy for new API endpoints
-- Follow day-based storage pattern - avoid storing aggregated data
+- Follow day-based storage pattern - avoid storing aggregated or computed data
 - Use migration system for all database schema changes
 - Maintain user/author separation in data model
 - Use JWT authentication for API security
 - Write Pydantic schemas for request/response validation
-- MVP is complete with full authentication, repository management, and statistics API
+- Design APIs with date-indexed responses for frontend charting
+- Return minimal data references (e.g. author_id) to avoid response bloat
+- Support flexible filtering (repo scope, AI coder exclusion, date ranges)
 
 ### Database Migrations
 - Create migration files in `backend/migrations/` with format `{version}_{description}.sql`
