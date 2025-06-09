@@ -68,10 +68,10 @@ python git_stats.py /path/to/repo --days N
 virtual env of the backend is at .venv directory of the workspace
 ```bash
 # Install dependencies and start development server
-uv add xxx
-uv run python backend/app/run.py
+uv sync
+uv run uvicorn backend.app.main:app --reload --port 8002
 
-# API documentation at http://localhost:8000/docs
+# API documentation at http://localhost:8002/docs
 ```
 
 ## Development Guidelines

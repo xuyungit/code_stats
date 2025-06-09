@@ -10,6 +10,7 @@ dependencies = [
     "fastapi",
     "passlib[bcrypt]",
     "pydantic-settings",
+    "pydantic[email]>=2.11.5",
     "python-jose[cryptography]",
     "python-multipart",
     "redis",
