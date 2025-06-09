@@ -67,6 +67,16 @@ The API will be available at `http://localhost:8002`
 - `GET /repositories/{repo_id}/authors` - List repository authors
 - `PUT /authors/{author_id}` - Update author (mark as AI coder)
 
+### Statistics
+- `GET /repositories/{repo_id}/stats/period?days=7&exclude_ai=false` - Get period statistics
+- `GET /repositories/{repo_id}/stats/daily?days=7` - Get daily breakdown
+- `GET /repositories/{repo_id}/stats/authors?days=7&exclude_ai=false` - Get author statistics
+
+### Analysis
+- `POST /repositories/{repo_id}/analyze` - Trigger git analysis
+- `GET /repositories/{repo_id}/jobs` - List analysis jobs
+- `GET /repositories/{repo_id}/jobs/{job_id}` - Get analysis job details
+
 ## Database Schema
 
 The system uses a day-based atomic storage approach:

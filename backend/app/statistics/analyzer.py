@@ -100,7 +100,10 @@ class WebGitAnalyzer:
             total_files = 0
             authors_count = 0
             
-            for email, stats in author_stats.items():
+            # Convert AuthorStats objects to final format first
+            final_stats = finalize_author_stats(author_stats)
+            
+            for email, stats in final_stats.items():
                 author = self.get_or_create_author(email, stats['name'])
                 
                 # Check if record already exists
@@ -172,8 +175,8 @@ class WebGitAnalyzer:
             current_date += timedelta(days=1)
         
         # Update repository last analyzed timestamp
-        from datetime import datetime
-        self.repository.last_analyzed_at = datetime.utcnow()
+        from datetime import datetime, timezone
+        self.repository.last_analyzed_at = datetime.now(timezone.utc)
         self.db.commit()
         
         return results

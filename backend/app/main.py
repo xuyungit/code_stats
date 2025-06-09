@@ -26,6 +26,10 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(repositories_router)
 
+# Import statistics router after other imports to avoid circular dependencies
+from .statistics.routes import router as statistics_router
+app.include_router(statistics_router)
+
 
 @app.on_event("startup")
 async def startup_event():

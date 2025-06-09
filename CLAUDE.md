@@ -28,14 +28,16 @@ This repository contains a web-based service for analyzing git repository code a
 - Track commits, lines added/deleted, files changed, and net activity
 - Handle edge cases like empty repositories and initial commits
 
-### Web Service Features
-- Multi-user support with secure authentication
-- Repository management (add, update, delete repositories)
+### Web Service Features (MVP Complete)
+- Multi-user support with JWT authentication
+- Repository management (add, update, delete repositories) 
+- Git analysis integration with job tracking
+- Statistics API (period, daily, author breakdowns)
 - Author tracking separate from system users
-- AI coder detection and flagging capability
-- Day-based statistics storage for flexible aggregation
+- Manual AI coder flagging capability
+- Day-based atomic storage for flexible aggregation
 - Database migration system for schema evolution
-- RESTful API with automatic documentation
+- RESTful API with automatic Swagger documentation
 
 ## Data Model Design
 
@@ -63,9 +65,9 @@ python git_stats.py /path/to/repo
 python git_stats.py /path/to/repo --days N
 ```
 
-### Web Service
+### Web Service (MVP Status: Complete ✅)
 
-virtual env of the backend is at .venv directory of the workspace
+Virtual environment is at .venv directory of the workspace
 ```bash
 # Install dependencies and start development server
 uv sync
@@ -74,6 +76,13 @@ uv run uvicorn backend.app.main:app --reload --port 8002
 # API documentation at http://localhost:8002/docs
 ```
 
+#### API Endpoints Available:
+- **Authentication**: `/auth/register`, `/auth/login`, `/auth/me`
+- **Repositories**: `/repositories/` (CRUD operations)
+- **Statistics**: `/repositories/{id}/stats/period`, `/stats/daily`, `/stats/authors`
+- **Analysis**: `/repositories/{id}/analyze` (trigger git analysis)
+- **Jobs**: `/repositories/{id}/jobs` (track analysis status)
+
 ## Development Guidelines
 
 ### General
@@ -81,13 +90,14 @@ uv run uvicorn backend.app.main:app --reload --port 8002
 - All git operations should handle subprocess errors gracefully
 - Maintain compatibility with various git repository states (empty, single commit, etc.)
 
-### Web Service Specific
+### Web Service Specific  
 - Use FastAPI with SQLAlchemy for new API endpoints
 - Follow day-based storage pattern - avoid storing aggregated data
 - Use migration system for all database schema changes
 - Maintain user/author separation in data model
 - Use JWT authentication for API security
 - Write Pydantic schemas for request/response validation
+- MVP is complete with full authentication, repository management, and statistics API
 
 ### Database Migrations
 - Create migration files in `backend/migrations/` with format `{version}_{description}.sql`
