@@ -16,8 +16,8 @@ A FastAPI-based web service for analyzing git repository statistics with multi-u
 ### 1. Install Dependencies
 
 ```bash
-cd backend
-pip install -r requirements.txt
+# Install dependencies using uv
+uv sync
 ```
 
 ### 2. Environment Setup
