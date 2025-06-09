@@ -64,11 +64,12 @@ python git_stats.py /path/to/repo --days N
 ```
 
 ### Web Service
+
+virtual env of the backend is at .venv directory of the workspace
 ```bash
-# Start development server
-cd backend
-pip install -r requirements.txt
-python app/run.py
+# Install dependencies and start development server
+uv add xxx
+uv run python backend/app/run.py
 
 # API documentation at http://localhost:8000/docs
 ```
