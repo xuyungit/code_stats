@@ -43,13 +43,9 @@ export const useAuthStore = defineStore('auth', () => {
       loading.value = true
       error.value = null
 
-      const formData = new FormData()
-      formData.append('username', credentials.username)
-      formData.append('password', credentials.password)
-
-      const response = await axios.post('/api/auth/login', formData, {
+      const response = await axios.post('/api/auth/login', credentials, {
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
       })
 
