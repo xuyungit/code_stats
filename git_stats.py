@@ -7,6 +7,93 @@ from datetime import date, datetime, timedelta
 import re
 import os
 
+def get_author_stats(repo_path, days_ago):
+    """
+    Calculates git statistics by author for a given repository and time period.
+
+    Args:
+        repo_path (str): The path to the git repository.
+        days_ago (int): The number of days to look back.
+
+    Returns:
+        dict: A dictionary with author emails as keys and their stats as values,
+              or None if an error occurs.
+    """
+    if not os.path.isdir(os.path.join(repo_path, '.git')):
+        print(f"Error: {repo_path} is not a valid git repository.")
+        return None
+
+    since_date = (datetime.now() - timedelta(days=days_ago)).strftime('%Y-%m-%d')
+    author_stats = {}
+
+    try:
+        # Get commits with author info within the time period
+        commits_cmd = [
+            'git', 'log', 
+            f'--since={since_date}', 
+            '--pretty=format:%H|%ae|%an'  # hash|author_email|author_name
+        ]
+        result = subprocess.run(commits_cmd, cwd=repo_path, capture_output=True, text=True, check=True)
+        
+        if not result.stdout.strip():
+            return {}
+        
+        commits_data = result.stdout.strip().split('\n')
+        
+        for commit_line in commits_data:
+            parts = commit_line.split('|')
+            if len(parts) >= 3:
+                commit_hash, author_email, author_name = parts[0], parts[1], parts[2]
+                
+                if author_email not in author_stats:
+                    author_stats[author_email] = {
+                        'name': author_name,
+                        'commits_count': 0,
+                        'added_lines': 0,
+                        'deleted_lines': 0,
+                        'total_files_changed': set()
+                    }
+                
+                author_stats[author_email]['commits_count'] += 1
+                
+                # Get diff stats for this commit
+                diff_cmd = ['git', 'show', '--stat', '--format=', commit_hash]
+                diff_result = subprocess.run(diff_cmd, cwd=repo_path, capture_output=True, text=True, check=True)
+                diff_output = diff_result.stdout.strip()
+                
+                # Parse the stats line (last line with insertions/deletions)
+                if diff_output:
+                    lines = diff_output.split('\n')
+                    for line in lines:
+                        if 'insertion' in line or 'deletion' in line:
+                            insertions_match = re.search(r'(\d+) insertions?\(\+\)', line)
+                            deletions_match = re.search(r'(\d+) deletions?\(-\)', line)
+                            
+                            if insertions_match:
+                                author_stats[author_email]['added_lines'] += int(insertions_match.group(1))
+                            if deletions_match:
+                                author_stats[author_email]['deleted_lines'] += int(deletions_match.group(1))
+                        elif line.strip() and '|' in line and not line.startswith(' '):
+                            # File change line (filename | changes)
+                            file_parts = line.split('|')
+                            if len(file_parts) >= 2:
+                                filename = file_parts[0].strip()
+                                author_stats[author_email]['total_files_changed'].add(filename)
+
+        # Convert sets to counts
+        for author in author_stats:
+            author_stats[author]['total_files_changed'] = len(author_stats[author]['total_files_changed'])
+
+    except subprocess.CalledProcessError as e:
+        print(f"Git command failed: {e}")
+        print(f"Stderr: {e.stderr}")
+        return None
+    except FileNotFoundError:
+        print("Error: git command not found. Is git installed and in your PATH?")
+        return None
+
+    return author_stats
+
 def get_git_stats(repo_path, days_ago):
     """
     Calculates git statistics for a given repository and time period.
@@ -98,6 +185,100 @@ def get_git_stats(repo_path, days_ago):
         'total_files_changed': total_files_changed,
         'commits_count': commits_count
     }
+
+def get_daily_author_stats(repo_path: str, target_date: date):
+    """
+    Calculates git statistics by author for a given repository for a specific day.
+
+    Args:
+        repo_path (str): The path to the git repository.
+        target_date (date): The specific date to get statistics for.
+
+    Returns:
+        dict: A dictionary with author emails as keys and their stats as values,
+              or None if an error occurs.
+    """
+    if not os.path.isdir(os.path.join(repo_path, '.git')):
+        return None
+
+    author_stats = {}
+    since_datetime_str = target_date.strftime('%Y-%m-%d 00:00:00')
+    until_datetime_str = (target_date + timedelta(days=1)).strftime('%Y-%m-%d 00:00:00')
+
+    try:
+        # Get commits with author info for the day
+        commits_cmd = [
+            'git', 'log',
+            f'--since={since_datetime_str}',
+            f'--until={until_datetime_str}',
+            '--pretty=format:%H|%ae|%an',
+            '--reverse'
+        ]
+        result = subprocess.run(commits_cmd, cwd=repo_path, capture_output=True, text=True, check=False)
+        
+        if result.returncode != 0:
+            if "your current branch 'master' does not have any commits yet" in result.stderr:
+                return {}
+            else:
+                print(f"Git log command failed for {target_date.strftime('%Y-%m-%d')}: {result.stderr.strip()}")
+                return None
+        
+        if not result.stdout.strip():
+            return {}
+        
+        commits_data = result.stdout.strip().split('\n')
+        
+        for commit_line in commits_data:
+            parts = commit_line.split('|')
+            if len(parts) >= 3:
+                commit_hash, author_email, author_name = parts[0], parts[1], parts[2]
+                
+                if author_email not in author_stats:
+                    author_stats[author_email] = {
+                        'name': author_name,
+                        'commits_count': 0,
+                        'added_lines': 0,
+                        'deleted_lines': 0,
+                        'total_files_changed': set()
+                    }
+                
+                author_stats[author_email]['commits_count'] += 1
+                
+                # Get diff stats for this commit
+                diff_cmd = ['git', 'show', '--stat', '--format=', commit_hash]
+                diff_result = subprocess.run(diff_cmd, cwd=repo_path, capture_output=True, text=True, check=True)
+                diff_output = diff_result.stdout.strip()
+                
+                if diff_output:
+                    lines = diff_output.split('\n')
+                    for line in lines:
+                        if 'insertion' in line or 'deletion' in line:
+                            insertions_match = re.search(r'(\d+) insertions?\(\+\)', line)
+                            deletions_match = re.search(r'(\d+) deletions?\(-\)', line)
+                            
+                            if insertions_match:
+                                author_stats[author_email]['added_lines'] += int(insertions_match.group(1))
+                            if deletions_match:
+                                author_stats[author_email]['deleted_lines'] += int(deletions_match.group(1))
+                        elif line.strip() and '|' in line and not line.startswith(' '):
+                            file_parts = line.split('|')
+                            if len(file_parts) >= 2:
+                                filename = file_parts[0].strip()
+                                author_stats[author_email]['total_files_changed'].add(filename)
+
+        # Convert sets to counts
+        for author in author_stats:
+            author_stats[author]['total_files_changed'] = len(author_stats[author]['total_files_changed'])
+
+    except subprocess.CalledProcessError as e:
+        print(f"Git command failed for {target_date.strftime('%Y-%m-%d')}: {e}")
+        print(f"Stderr: {e.stderr}")
+        return None
+    except FileNotFoundError:
+        print("Error: git command not found. Is git installed and in your PATH?")
+        return None
+
+    return author_stats
 
 def get_daily_git_stats(repo_path: str, target_date: date):
     """
@@ -212,6 +393,16 @@ def main():
         default=7, 
         help='Number of recent days to show daily statistics for. Default is 7.'
     )
+    parser.add_argument(
+        '--authors',
+        action='store_true',
+        help='Show statistics broken down by author instead of daily breakdown.'
+    )
+    parser.add_argument(
+        '--daily-authors',
+        action='store_true',
+        help='Show daily statistics with author breakdown for each day.'
+    )
 
     args = parser.parse_args()
 
@@ -223,32 +414,102 @@ def main():
         print(f"Error: {args.repo_path} is not a valid git repository.")
         return
 
-    base_date = datetime.now().date() # Use date part for daily calculations
-    print(f"\n--- Daily Git Repository Statistics for the last {args.days} day(s) ---")
-    print(f"Repository: {os.path.abspath(args.repo_path)}")
-    print(f"-----------------------------------------------------")
+    repo_abs_path = os.path.abspath(args.repo_path)
 
-    for i in range(args.days):
-        # Iterate from today (i=0) to N-1 days ago
-        current_target_date = base_date - timedelta(days=i)
-        print(f"\nDate: {current_target_date.strftime('%Y-%m-%d')}")
+    if args.authors:
+        # Show author statistics for the entire period
+        print(f"\n--- Author Git Repository Statistics for the last {args.days} day(s) ---")
+        print(f"Repository: {repo_abs_path}")
+        print(f"-----------------------------------------------------")
         
-        stats = get_daily_git_stats(args.repo_path, current_target_date)
-
-        if stats:
-            print(f"  Commits: {stats['commits_count']}")
-            print(f"  Files changed: {stats['total_files_changed']}")
-            print(f"  Lines added: {stats['added_lines']}")
-            print(f"  Lines deleted: {stats['deleted_lines']}")
-            net_change = stats['added_lines'] - stats['deleted_lines']
-            print(f"  Net lines change:  {net_change} ({'+' if net_change >= 0 else ''}{net_change})")
-            total_activity = stats['added_lines'] + stats['deleted_lines'] 
-            print(f"  Total line activity: {total_activity}")
+        author_stats = get_author_stats(args.repo_path, args.days)
+        
+        if author_stats:
+            # Sort authors by total activity (lines added + deleted)
+            sorted_authors = sorted(author_stats.items(), 
+                                   key=lambda x: x[1]['added_lines'] + x[1]['deleted_lines'], 
+                                   reverse=True)
+            
+            for author_email, stats in sorted_authors:
+                print(f"\nAuthor: {stats['name']} <{author_email}>")
+                print(f"  Commits: {stats['commits_count']}")
+                print(f"  Files changed: {stats['total_files_changed']}")
+                print(f"  Lines added: {stats['added_lines']}")
+                print(f"  Lines deleted: {stats['deleted_lines']}")
+                net_change = stats['added_lines'] - stats['deleted_lines']
+                print(f"  Net lines change: {net_change} ({'+' if net_change >= 0 else ''}{net_change})")
+                total_activity = stats['added_lines'] + stats['deleted_lines']
+                print(f"  Total line activity: {total_activity}")
         else:
-            # get_daily_git_stats might have printed an error, or it might be a day with no activity
-            # If it returned None, an error was printed. If it returned 0 stats, it means no activity.
-            # We can refine this if needed, but for now, a general message or relying on get_daily_git_stats's prints.
-            print(f"  No activity or error fetching stats for this day.")
+            print("No activity found for the specified period.")
+            
+    elif args.daily_authors:
+        # Show daily statistics with author breakdown
+        base_date = datetime.now().date()
+        print(f"\n--- Daily Git Repository Statistics with Author Breakdown for the last {args.days} day(s) ---")
+        print(f"Repository: {repo_abs_path}")
+        print(f"-----------------------------------------------------")
+
+        for i in range(args.days):
+            current_target_date = base_date - timedelta(days=i)
+            print(f"\nDate: {current_target_date.strftime('%Y-%m-%d')}")
+            
+            author_stats = get_daily_author_stats(args.repo_path, current_target_date)
+            
+            if author_stats:
+                sorted_authors = sorted(author_stats.items(), 
+                                       key=lambda x: x[1]['added_lines'] + x[1]['deleted_lines'], 
+                                       reverse=True)
+                
+                day_totals = {'commits': 0, 'added': 0, 'deleted': 0, 'files': set()}
+                
+                for author_email, stats in sorted_authors:
+                    print(f"  {stats['name']} <{author_email}>:")
+                    print(f"    Commits: {stats['commits_count']}")
+                    print(f"    Files changed: {stats['total_files_changed']}")
+                    print(f"    Lines added: {stats['added_lines']}")
+                    print(f"    Lines deleted: {stats['deleted_lines']}")
+                    net_change = stats['added_lines'] - stats['deleted_lines']
+                    print(f"    Net change: {net_change} ({'+' if net_change >= 0 else ''}{net_change})")
+                    
+                    day_totals['commits'] += stats['commits_count']
+                    day_totals['added'] += stats['added_lines']
+                    day_totals['deleted'] += stats['deleted_lines']
+                
+                print(f"  Day Total:")
+                print(f"    Total commits: {day_totals['commits']}")
+                print(f"    Total lines added: {day_totals['added']}")
+                print(f"    Total lines deleted: {day_totals['deleted']}")
+                net_total = day_totals['added'] - day_totals['deleted']
+                print(f"    Net change: {net_total} ({'+' if net_total >= 0 else ''}{net_total})")
+                print(f"    Total activity: {day_totals['added'] + day_totals['deleted']}")
+            else:
+                print("  No activity or error fetching stats for this day.")
+                
+    else:
+        # Original daily breakdown mode
+        base_date = datetime.now().date()
+        print(f"\n--- Daily Git Repository Statistics for the last {args.days} day(s) ---")
+        print(f"Repository: {repo_abs_path}")
+        print(f"-----------------------------------------------------")
+
+        for i in range(args.days):
+            current_target_date = base_date - timedelta(days=i)
+            print(f"\nDate: {current_target_date.strftime('%Y-%m-%d')}")
+            
+            stats = get_daily_git_stats(args.repo_path, current_target_date)
+
+            if stats:
+                print(f"  Commits: {stats['commits_count']}")
+                print(f"  Files changed: {stats['total_files_changed']}")
+                print(f"  Lines added: {stats['added_lines']}")
+                print(f"  Lines deleted: {stats['deleted_lines']}")
+                net_change = stats['added_lines'] - stats['deleted_lines']
+                print(f"  Net lines change: {net_change} ({'+' if net_change >= 0 else ''}{net_change})")
+                total_activity = stats['added_lines'] + stats['deleted_lines'] 
+                print(f"  Total line activity: {total_activity}")
+            else:
+                print(f"  No activity or error fetching stats for this day.")
             
     print(f"-----------------------------------------------------")
 
