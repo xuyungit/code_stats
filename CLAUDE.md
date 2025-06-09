@@ -6,6 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repository contains a web-based service for analyzing git repository code activity and statistics. Originally a command-line tool, it has been expanded into a multi-user web service with REST API and database storage for tracking development metrics over time.
 
+## Memory Log
+
+- Record important discussion keypoints and agreement with claude code into a markdown file in doc folder (create different files for different topics)
 
 ## Architecture
 
@@ -101,25 +104,7 @@ uv run uvicorn backend.app.main:app --reload --port 8002
 - **Analysis**: `/api/repositories/{id}/analyze` (trigger git analysis)
 - **Jobs**: `/api/repositories/{id}/jobs` (track analysis status)
 
-#### Testing:
-```bash
-# Run full-stack end-to-end regression test
-python test_fullstack.py
-
-# Test covers complete workflow:
-# - API health checks and frontend serving
-# - User registration and authentication
-# - Repository CRUD operations
-# - Git analysis triggering and completion
-# - Statistics retrieval and validation
-```
-
 ## Development Guidelines
-
-### General
-- Python 3.13+ required
-- All git operations should handle subprocess errors gracefully
-- Maintain compatibility with various git repository states (empty, single commit, etc.)
 
 ### Web Service Specific  
 - Use FastAPI with SQLAlchemy for new API endpoints
