@@ -251,6 +251,14 @@
                         </svg>
                       </div>
                     </th>
+                    <th @click="sortBy('ai_lines_percentage')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                      <div class="flex items-center space-x-1">
+                        <span>AI Assistance</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
+                        </svg>
+                      </div>
+                    </th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Active Repositories
                     </th>
@@ -298,6 +306,29 @@
                       'text-gray-600': author.net_change === 0
                     }">
                       {{ (author.net_change > 0 ? '+' : '') + author.net_change.toLocaleString() }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center space-x-2">
+                        <div class="flex-shrink-0 w-16 bg-gray-200 rounded-full h-2">
+                          <div 
+                            class="h-2 rounded-full transition-all duration-300"
+                            :class="{
+                              'bg-orange-500': getAuthorAiPercentage(author.author_email) > 0,
+                              'bg-gray-300': getAuthorAiPercentage(author.author_email) === 0
+                            }"
+                            :style="{ width: Math.min(100, getAuthorAiPercentage(author.author_email)) + '%' }"
+                          ></div>
+                        </div>
+                        <span class="text-sm font-medium" :class="{
+                          'text-orange-600': getAuthorAiPercentage(author.author_email) > 0,
+                          'text-gray-500': getAuthorAiPercentage(author.author_email) === 0
+                        }">
+                          {{ getAuthorAiPercentage(author.author_email).toFixed(1) }}%
+                        </span>
+                        <svg v-if="author.is_ai_coder" class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                      </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex flex-wrap gap-1">
@@ -379,7 +410,7 @@ interface DailyAuthorData {
   files_changed: number
 }
 
-const { api, loading, error } = useApi()
+const { api, loading, error, getOverallAiStats, getOverallAiTrends } = useApi()
 const selectedDays = ref(30)
 const chartTopN = ref(5)
 const excludeAI = ref(false)
@@ -392,6 +423,9 @@ const dailyAuthorsData = ref<DailyAuthorData[]>([])
 const authorsChart = ref<HTMLCanvasElement>()
 const codeAddedChart = ref<HTMLCanvasElement>()
 const codeAddedChartTopN = ref(5)
+
+// AI Statistics
+const allAuthorAiStats = ref<Map<string, number>>(new Map())
 
 const activeAuthors = computed(() => 
   allAuthors.value.filter(author => author.commits_count > 0)
@@ -425,6 +459,10 @@ const sortBy = (field: string) => {
     sortField.value = field
     sortDirection.value = 'desc'
   }
+}
+
+const getAuthorAiPercentage = (authorEmail: string): number => {
+  return allAuthorAiStats.value.get(authorEmail) || 0
 }
 
 const fetchRepositories = async () => {
@@ -558,12 +596,50 @@ const fetchAuthorsData = async () => {
     })
     dailyAuthorsData.value = allDailyData
     
+    // Fetch AI statistics for all authors
+    await fetchAuthorAiStats()
+    
     // Update charts
     await nextTick()
     updateChart()
     updateCodeAddedChart()
   } catch (err) {
     console.error('Failed to fetch authors data:', err)
+  }
+}
+
+const fetchAuthorAiStats = async () => {
+  if (repositories.value.length === 0) return
+  
+  try {
+    // Clear existing AI stats
+    allAuthorAiStats.value.clear()
+    
+    // Fetch AI author stats for each repository
+    for (const repo of repositories.value) {
+      try {
+        const aiAuthorResponse = await api.get(`/repositories/${repo.id}/stats/ai-authors`, {
+          params: { days: selectedDays.value }
+        })
+        
+        const aiAuthors = aiAuthorResponse.data || []
+        aiAuthors.forEach((aiAuthor: any) => {
+          const email = aiAuthor.author_email
+          const currentPercentage = allAuthorAiStats.value.get(email) || 0
+          const newPercentage = aiAuthor.ai_lines_percentage || 0
+          
+          // Take the average AI percentage across repositories for this author
+          const existingRepoCount = Array.from(allAuthorAiStats.value.keys()).filter(e => e === email).length
+          const avgPercentage = (currentPercentage * existingRepoCount + newPercentage) / (existingRepoCount + 1)
+          
+          allAuthorAiStats.value.set(email, avgPercentage)
+        })
+      } catch (err) {
+        console.error(`Failed to fetch AI stats for repo ${repo.id}:`, err)
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch AI author stats:', err)
   }
 }
 
