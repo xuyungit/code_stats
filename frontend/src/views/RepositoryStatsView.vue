@@ -546,6 +546,10 @@ const fetchStats = async () => {
 }
 
 const applyFilters = () => {
+  // Clear cached daily author details when filters change
+  dailyAuthorDetails.value.clear()
+  expandedRows.value.clear()
+  
   // Filter daily stats by author
   if (selectedAuthor.value === 'all') {
     filteredDailyStats.value = [...dailyStats.value]
@@ -980,75 +984,45 @@ const toggleRowExpansion = async (date: string) => {
 
 const fetchDailyAuthorDetails = async (date: string) => {
   try {
-    // For now, we'll generate synthetic author breakdown based on the daily total
-    // In a real implementation, this would call an API endpoint like:
-    // /repositories/${repoId}/stats/daily/${date}/authors
+    // Check if we already have the data cached
+    if (dailyAuthorDetails.value.has(date)) return
     
-    const dailyStat = filteredDailyStats.value.find(stat => stat.date === date)
-    if (!dailyStat || dailyStat.authors_count === 0) return
-    
-    // Generate realistic author breakdown based on the known author stats
-    const authorsForDate: DailyAuthorDetail[] = []
-    const availableAuthors = filteredAuthorStats.value.slice(0, dailyStat.authors_count)
-    
-    if (availableAuthors.length === 0) return
-    
-    // Distribute the daily totals among the authors
-    let remainingCommits = dailyStat.commits_count
-    let remainingAdded = dailyStat.added_lines
-    let remainingDeleted = dailyStat.deleted_lines
-    let remainingFiles = dailyStat.total_files_changed || 0
-    
-    availableAuthors.forEach((author, index) => {
-      const isLastAuthor = index === availableAuthors.length - 1
-      
-      // Calculate this author's share (weighted by their overall activity)
-      const totalAuthorActivity = availableAuthors.reduce((sum, a) => 
-        sum + (a.commits_count * 10) + a.added_lines + (a.deleted_lines * 0.2), 0
-      )
-      const authorActivity = (author.commits_count * 10) + author.added_lines + (author.deleted_lines * 0.2)
-      const authorWeight = totalAuthorActivity > 0 ? authorActivity / totalAuthorActivity : 1 / availableAuthors.length
-      
-      // Add some randomness to make it more realistic
-      const randomFactor = 0.7 + Math.random() * 0.6 // 0.7 to 1.3
-      const adjustedWeight = authorWeight * randomFactor
-      
-      let authorCommits, authorAdded, authorDeleted, authorFiles
-      
-      if (isLastAuthor) {
-        // Last author gets all remaining
-        authorCommits = remainingCommits
-        authorAdded = remainingAdded
-        authorDeleted = remainingDeleted
-        authorFiles = remainingFiles
-      } else {
-        // Distribute based on weight
-        authorCommits = Math.max(0, Math.round(dailyStat.commits_count * adjustedWeight))
-        authorAdded = Math.max(0, Math.round(dailyStat.added_lines * adjustedWeight))
-        authorDeleted = Math.max(0, Math.round(dailyStat.deleted_lines * adjustedWeight))
-        authorFiles = Math.max(0, Math.round((dailyStat.total_files_changed || 0) * adjustedWeight))
-        
-        // Update remaining
-        remainingCommits -= authorCommits
-        remainingAdded -= authorAdded
-        remainingDeleted -= authorDeleted
-        remainingFiles -= authorFiles
+    // Fetch real daily author breakdown from API
+    const response = await api.get(`/repositories/${repoId}/stats/daily-authors`, {
+      params: { 
+        days: selectedDays.value,
+        exclude_ai: excludeAI.value
       }
-      
-      authorsForDate.push({
-        author_email: author.author_email,
-        author_name: author.author_name,
-        is_ai_coder: author.is_ai_coder || false,
-        commits_count: authorCommits,
-        added_lines: authorAdded,
-        deleted_lines: authorDeleted,
-        files_changed: authorFiles
-      })
     })
     
-    dailyAuthorDetails.value.set(date, authorsForDate)
+    const dailyBreakdown = response.data.daily_stats || []
+    
+    // Process the response and cache all daily data
+    dailyBreakdown.forEach((dayStats: any) => {
+      const dayDate = dayStats.date
+      const authorsForDay: DailyAuthorDetail[] = []
+      
+      if (dayStats.authors && dayStats.authors.length > 0) {
+        dayStats.authors.forEach((authorDetail: any) => {
+          authorsForDay.push({
+            author_email: authorDetail.author.email,
+            author_name: authorDetail.author.name,
+            is_ai_coder: authorDetail.author.is_ai_coder || false,
+            commits_count: authorDetail.commits_count,
+            added_lines: authorDetail.added_lines,
+            deleted_lines: authorDetail.deleted_lines,
+            files_changed: authorDetail.files_changed
+          })
+        })
+      }
+      
+      // Cache the data for this date
+      dailyAuthorDetails.value.set(dayDate, authorsForDay)
+    })
   } catch (err) {
     console.error('Failed to fetch daily author details:', err)
+    // Fallback: if API fails, show empty details for this date
+    dailyAuthorDetails.value.set(date, [])
   }
 }
 

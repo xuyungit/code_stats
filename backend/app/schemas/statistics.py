@@ -94,6 +94,46 @@ class RepoDailyResponse(BaseModel):
         from_attributes = True
 
 
+class AuthorDetail(BaseModel):
+    id: int
+    email: str
+    name: str
+    is_ai_coder: bool
+    
+    class Config:
+        from_attributes = True
+
+
+class DailyAuthorDetail(BaseModel):
+    author: AuthorDetail
+    commits_count: int
+    added_lines: int
+    deleted_lines: int
+    files_changed: int
+    net_change: int
+    total_activity: int
+    
+    class Config:
+        from_attributes = True
+
+
+class DailyAuthorStatsResponse(BaseModel):
+    date: date
+    authors: List[DailyAuthorDetail]
+    
+    class Config:
+        from_attributes = True
+
+
+class DailyAuthorsBreakdownResponse(BaseModel):
+    daily_stats: List[DailyAuthorStatsResponse]
+    period_days: int
+    total_days_with_activity: int
+    
+    class Config:
+        from_attributes = True
+
+
 class AnalysisJobRequest(BaseModel):
     days: Optional[int] = 30
     force_refresh: Optional[bool] = False

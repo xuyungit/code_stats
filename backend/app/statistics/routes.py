@@ -6,7 +6,8 @@ from ..core.models import User, Repository, AnalysisJob
 from ..schemas.statistics import (
     DailyStatsResponse, PeriodStatsResponse, AuthorStatsResponse,
     DailyBreakdownResponse, AuthorBreakdownResponse,
-    AnalysisJobRequest, AnalysisJobResponse, RepoDailyResponse
+    AnalysisJobRequest, AnalysisJobResponse, RepoDailyResponse,
+    DailyAuthorsBreakdownResponse
 )
 from ..auth.dependencies import get_current_user
 from .services import StatisticsService
@@ -97,6 +98,29 @@ async def get_author_statistics(
         )
     
     return stats_service.get_author_stats(repo_id, days, exclude_ai)
+
+
+@router.get("/{repo_id}/stats/daily-authors", response_model=DailyAuthorsBreakdownResponse)
+async def get_daily_author_statistics(
+    repo_id: int,
+    days: int = Query(default=7, ge=1, le=90, description="Number of recent days to show"),
+    exclude_ai: bool = Query(default=False, description="Exclude AI coders from statistics"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get daily breakdown with author details from the database."""
+    repository = get_user_repository(repo_id, current_user, db)
+    
+    stats_service = StatisticsService(db)
+    
+    # Check if we have data for this period
+    if not stats_service.has_data_for_period(repo_id, days):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No statistics data found for the last {days} days. Please run analysis first."
+        )
+    
+    return stats_service.get_daily_author_breakdown(repo_id, days, exclude_ai)
 
 
 @router.post("/{repo_id}/analyze", response_model=AnalysisJobResponse)

@@ -6,7 +6,8 @@ from ..core.models import Repository, DailyAuthorStats, Author, AnalysisJob
 from ..schemas.statistics import (
     DailyStatsResponse, PeriodStatsResponse, AuthorStatsResponse,
     DailyBreakdownResponse, AuthorBreakdownResponse, RepoDailyResponse,
-    DailyStatsWithAuthors, AuthorDailyContribution
+    DailyStatsWithAuthors, AuthorDailyContribution, DailyAuthorsBreakdownResponse,
+    DailyAuthorStatsResponse, DailyAuthorDetail, AuthorDetail
 )
 
 
@@ -265,4 +266,75 @@ class StatisticsService:
             daily_stats=daily_stats,
             date_range=f"{date_from} to {date_to}",
             repositories_included=repositories_included
+        )
+
+    def get_daily_author_breakdown(self, repo_id: int, days: int, exclude_ai: bool = False) -> DailyAuthorsBreakdownResponse:
+        """Get daily breakdown with full author details for multiple days."""
+        end_date = date.today()
+        start_date = end_date - timedelta(days=days-1)
+        
+        # Query to get daily author stats with full author details
+        query = self.db.query(DailyAuthorStats, Author).join(Author).filter(
+            and_(
+                DailyAuthorStats.repository_id == repo_id,
+                DailyAuthorStats.date >= start_date,
+                DailyAuthorStats.date <= end_date
+            )
+        )
+        
+        # Exclude AI coders if requested
+        if exclude_ai:
+            query = query.filter(Author.is_ai_coder == False)
+        
+        # Order by date and author name for consistency
+        query = query.order_by(DailyAuthorStats.date.desc(), Author.name)
+        
+        results = query.all()
+        
+        # Group results by date
+        daily_data = {}
+        for stat, author in results:
+            stat_date = stat.date
+            if stat_date not in daily_data:
+                daily_data[stat_date] = []
+            
+            # Calculate derived values
+            net_change = stat.added_lines - stat.deleted_lines
+            total_activity = stat.added_lines + stat.deleted_lines
+            
+            daily_data[stat_date].append(DailyAuthorDetail(
+                author=AuthorDetail(
+                    id=author.id,
+                    email=author.email,
+                    name=author.name,
+                    is_ai_coder=author.is_ai_coder
+                ),
+                commits_count=stat.commits_count,
+                added_lines=stat.added_lines,
+                deleted_lines=stat.deleted_lines,
+                files_changed=stat.files_changed,
+                net_change=net_change,
+                total_activity=total_activity
+            ))
+        
+        # Create daily stats list for the entire period
+        daily_stats = []
+        days_with_activity = 0
+        
+        current_date = start_date
+        while current_date <= end_date:
+            authors_data = daily_data.get(current_date, [])
+            if authors_data:
+                days_with_activity += 1
+            
+            daily_stats.append(DailyAuthorStatsResponse(
+                date=current_date,
+                authors=authors_data
+            ))
+            current_date += timedelta(days=1)
+        
+        return DailyAuthorsBreakdownResponse(
+            daily_stats=daily_stats,
+            period_days=days,
+            total_days_with_activity=days_with_activity
         )
