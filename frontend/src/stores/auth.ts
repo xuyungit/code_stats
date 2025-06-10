@@ -143,7 +143,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Set up activity-based token refresh
-  let refreshInterval: NodeJS.Timeout | null = null
+  let refreshInterval: number | null = null
   
   const startActivityMonitoring = () => {
     if (refreshInterval) return
