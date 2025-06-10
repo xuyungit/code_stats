@@ -16,11 +16,12 @@ export const useApi = () => {
     },
   })
 
-  // Add auth token to requests
+  // Add auth token to requests and track activity
   api.interceptors.request.use((config) => {
     const token = authStore.token
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
+      authStore.updateActivity() // Track user activity
     }
     return config
   })

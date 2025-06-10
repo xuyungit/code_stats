@@ -25,6 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const lastActivity = ref<number>(Date.now())
 
   const isAuthenticated = computed(() => !!token.value)
 
@@ -51,6 +52,8 @@ export const useAuthStore = defineStore('auth', () => {
 
       setToken(response.data.access_token)
       await fetchUser()
+      updateActivity()
+      startActivityMonitoring()
       return true
     } catch (err: any) {
       error.value = err.response?.data?.detail || 'Login failed'
@@ -96,7 +99,39 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  const refreshToken = async (): Promise<boolean> => {
+    if (!token.value) return false
+
+    try {
+      const response = await axios.post('/api/auth/refresh', {}, {
+        headers: {
+          Authorization: `Bearer ${token.value}`,
+        },
+      })
+      
+      setToken(response.data.access_token)
+      updateActivity()
+      return true
+    } catch (err) {
+      // Refresh failed, logout user
+      logout()
+      return false
+    }
+  }
+
+  const updateActivity = () => {
+    lastActivity.value = Date.now()
+  }
+
+  const shouldRefreshToken = (): boolean => {
+    const now = Date.now()
+    const timeSinceActivity = now - lastActivity.value
+    // Refresh if more than 2 hours since last activity and still authenticated
+    return isAuthenticated.value && timeSinceActivity > 2 * 60 * 60 * 1000
+  }
+
   const logout = () => {
+    stopActivityMonitoring()
     clearToken()
     user.value = null
     error.value = null
@@ -105,6 +140,31 @@ export const useAuthStore = defineStore('auth', () => {
   // Initialize user on store creation
   if (token.value) {
     fetchUser()
+  }
+
+  // Set up activity-based token refresh
+  let refreshInterval: NodeJS.Timeout | null = null
+  
+  const startActivityMonitoring = () => {
+    if (refreshInterval) return
+    
+    refreshInterval = setInterval(() => {
+      if (shouldRefreshToken()) {
+        refreshToken()
+      }
+    }, 30 * 60 * 1000) // Check every 30 minutes
+  }
+
+  const stopActivityMonitoring = () => {
+    if (refreshInterval) {
+      clearInterval(refreshInterval)
+      refreshInterval = null
+    }
+  }
+
+  // Start monitoring if authenticated
+  if (isAuthenticated.value) {
+    startActivityMonitoring()
   }
 
   return {
@@ -117,5 +177,9 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     fetchUser,
+    refreshToken,
+    updateActivity,
+    startActivityMonitoring,
+    stopActivityMonitoring,
   }
 })
