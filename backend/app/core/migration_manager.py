@@ -3,6 +3,7 @@ import sqlite3
 from typing import List, Dict, Optional
 from dataclasses import dataclass
 from pathlib import Path
+import sqlalchemy
 from sqlalchemy.orm import Session
 from .database import engine, SessionLocal
 from .models import SchemaMigration
@@ -79,8 +80,13 @@ class MigrationManager:
                 print(f"Applying migration {migration.version}: {migration.description}")
                 
                 try:
-                    # Execute migration SQL
-                    engine.execute(migration.up_sql)
+                    # Execute migration SQL - split by semicolon and execute each statement
+                    with engine.connect() as conn:
+                        statements = [stmt.strip() for stmt in migration.up_sql.split(';') if stmt.strip()]
+                        for statement in statements:
+                            if statement:
+                                conn.execute(sqlalchemy.text(statement))
+                        conn.commit()
                     
                     # Record migration
                     migration_record = SchemaMigration(
@@ -108,7 +114,12 @@ class MigrationManager:
                 if version in available and available[version].down_sql:
                     print(f"Rolling back migration {version}")
                     try:
-                        engine.execute(available[version].down_sql)
+                        with engine.connect() as conn:
+                            statements = [stmt.strip() for stmt in available[version].down_sql.split(';') if stmt.strip()]
+                            for statement in statements:
+                                if statement:
+                                    conn.execute(sqlalchemy.text(statement))
+                            conn.commit()
                         session.query(SchemaMigration).filter(
                             SchemaMigration.version == version
                         ).delete()

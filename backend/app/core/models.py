@@ -30,6 +30,8 @@ class Author(Base):
     
     # Relationships
     daily_stats = relationship("DailyAuthorStats", back_populates="author")
+    commits = relationship("Commit", back_populates="author")
+    co_authored_commits = relationship("CommitCoAuthor", back_populates="author")
 
 
 class Repository(Base):
@@ -48,6 +50,7 @@ class Repository(Base):
     # Relationships
     owner = relationship("User", back_populates="repositories")
     daily_stats = relationship("DailyAuthorStats", back_populates="repository")
+    commits = relationship("Commit", back_populates="repository")
     analysis_jobs = relationship("AnalysisJob", back_populates="repository")
 
 
@@ -68,6 +71,39 @@ class DailyAuthorStats(Base):
     # Relationships
     repository = relationship("Repository", back_populates="daily_stats")
     author = relationship("Author", back_populates="daily_stats")
+
+
+class Commit(Base):
+    __tablename__ = "commits"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    repository_id = Column(Integer, ForeignKey("repositories.id"), nullable=False)
+    author_id = Column(Integer, ForeignKey("authors.id"), nullable=False)
+    hash = Column(String(40), nullable=False, index=True)  # Git commit hash
+    message = Column(Text, nullable=False)
+    commit_datetime = Column(DateTime(timezone=True), nullable=False)
+    added_lines = Column(Integer, default=0)
+    deleted_lines = Column(Integer, default=0)
+    files_changed = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    repository = relationship("Repository", back_populates="commits")
+    author = relationship("Author", back_populates="commits")
+    co_authors = relationship("CommitCoAuthor", back_populates="commit")
+
+
+class CommitCoAuthor(Base):
+    __tablename__ = "commit_co_authors"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    commit_id = Column(Integer, ForeignKey("commits.id"), nullable=False)
+    author_id = Column(Integer, ForeignKey("authors.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    commit = relationship("Commit", back_populates="co_authors")
+    author = relationship("Author", back_populates="co_authored_commits")
 
 
 class AnalysisJob(Base):

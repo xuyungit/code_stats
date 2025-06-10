@@ -121,6 +121,64 @@ def get_commits_with_authors(repo_path: str, since_date: str, until_date: Option
     return commits
 
 
+def get_commits_detailed(repo_path: str, since_date: str, until_date: Optional[str] = None) -> List[dict]:
+    """
+    Gets detailed commit information including message and datetime for a specific time period.
+    
+    Args:
+        repo_path: Path to the git repository
+        since_date: Start date in YYYY-MM-DD format
+        until_date: End date in YYYY-MM-DD format (optional)
+        
+    Returns:
+        List of dictionaries with commit hash, author email, author name, message, and datetime
+    """
+    # Format: hash|author_email|author_name|iso_datetime|commit_message
+    cmd = ['git', 'log', f'--since={since_date}', '--pretty=format:%H|%ae|%an|%aI|%B']
+    if until_date:
+        cmd.append(f'--until={until_date}')
+    
+    result = run_git_command(cmd, repo_path, check=False)
+    
+    if result.returncode != 0:
+        if "your current branch 'master' does not have any commits yet" in result.stderr:
+            return []
+        else:
+            raise GitError(f"Git log command failed: {result.stderr.strip()}")
+    
+    if not result.stdout.strip():
+        return []
+    
+    commits = []
+    # Split by commit separator (double newline followed by hash pattern)
+    commit_blocks = result.stdout.strip().split('\n\n')
+    
+    for block in commit_blocks:
+        if not block.strip():
+            continue
+            
+        lines = block.strip().split('\n')
+        if not lines:
+            continue
+            
+        # First line contains hash|email|name|datetime
+        header_parts = lines[0].split('|', 3)
+        if len(header_parts) >= 4:
+            # Message is everything after the header line
+            message_lines = lines[1:] if len(lines) > 1 else ['']
+            message = '\n'.join(message_lines).strip()
+            
+            commits.append({
+                'hash': header_parts[0],
+                'author_email': header_parts[1],
+                'author_name': header_parts[2],
+                'datetime': header_parts[3],
+                'message': message
+            })
+    
+    return commits
+
+
 def get_diff_shortstat(repo_path: str, from_ref: str, to_ref: str) -> str:
     """
     Gets the shortstat output for a diff between two git references.
