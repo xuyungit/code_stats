@@ -128,7 +128,8 @@ class WebGitAnalyzer:
                 
                 # Get diff stats for this commit
                 diff_output = get_commit_diff_stats(self.repo_path, commit_info['hash'])
-                added, deleted, files = parse_commit_diff_stats(diff_output)
+                added, deleted, files_set = parse_commit_diff_stats(diff_output)
+                files_count = len(files_set)  # Convert set to count
                 
                 # Parse commit datetime
                 from datetime import datetime
@@ -149,7 +150,7 @@ class WebGitAnalyzer:
                     commit_datetime=commit_dt,
                     added_lines=added,
                     deleted_lines=deleted,
-                    files_changed=files
+                    files_changed=files_count
                 )
                 self.db.add(commit_record)
                 self.db.flush()  # Get the commit ID
@@ -173,7 +174,7 @@ class WebGitAnalyzer:
                 stored_commits += 1
                 total_added += added
                 total_deleted += deleted
-                total_files += files
+                total_files += files_count
                 unique_authors.add(primary_author.id)
                 
                 # Add co-authors to unique authors count

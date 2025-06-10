@@ -133,8 +133,8 @@ def get_commits_detailed(repo_path: str, since_date: str, until_date: Optional[s
     Returns:
         List of dictionaries with commit hash, author email, author name, message, and datetime
     """
-    # Format: hash|author_email|author_name|iso_datetime|commit_message
-    cmd = ['git', 'log', f'--since={since_date}', '--pretty=format:%H|%ae|%an|%aI|%B']
+    # Use a unique separator to avoid confusion
+    cmd = ['git', 'log', f'--since={since_date}', '--pretty=format:%H|||%ae|||%an|||%aI|||%B|||COMMIT_END|||']
     if until_date:
         cmd.append(f'--until={until_date}')
     
@@ -150,29 +150,27 @@ def get_commits_detailed(repo_path: str, since_date: str, until_date: Optional[s
         return []
     
     commits = []
-    # Split by commit separator (double newline followed by hash pattern)
-    commit_blocks = result.stdout.strip().split('\n\n')
+    # Split by commit separator
+    commit_blocks = result.stdout.strip().split('|||COMMIT_END|||')
     
     for block in commit_blocks:
         if not block.strip():
             continue
             
-        lines = block.strip().split('\n')
-        if not lines:
-            continue
-            
-        # First line contains hash|email|name|datetime
-        header_parts = lines[0].split('|', 3)
-        if len(header_parts) >= 4:
-            # Message is everything after the header line
-            message_lines = lines[1:] if len(lines) > 1 else ['']
-            message = '\n'.join(message_lines).strip()
+        # Split the commit data
+        parts = block.strip().split('|||')
+        if len(parts) >= 5:
+            hash_val = parts[0]
+            author_email = parts[1] 
+            author_name = parts[2]
+            datetime_val = parts[3]
+            message = parts[4].strip() if len(parts) > 4 else ''
             
             commits.append({
-                'hash': header_parts[0],
-                'author_email': header_parts[1],
-                'author_name': header_parts[2],
-                'datetime': header_parts[3],
+                'hash': hash_val,
+                'author_email': author_email,
+                'author_name': author_name,
+                'datetime': datetime_val,
                 'message': message
             })
     
