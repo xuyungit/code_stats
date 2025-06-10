@@ -198,7 +198,7 @@
                   </div>
                   <div class="ml-4">
                     <div class="text-sm font-medium text-gray-500">AI Contributors</div>
-                    <div class="text-2xl font-bold text-indigo-600">{{ aiAuthorStats?.filter(a => a.is_ai_coder).length ?? '0' }}</div>
+                    <div class="text-2xl font-bold text-indigo-600">{{ authorStats.filter(a => a.is_ai_coder).length }}</div>
                     <div class="text-xs text-gray-400">AI co-authors detected</div>
                   </div>
                 </div>
