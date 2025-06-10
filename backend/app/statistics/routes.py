@@ -301,3 +301,69 @@ async def get_repo_daily_stats(
         repo_id=repo_id,
         exclude_ai=exclude_ai
     )
+
+
+# AI Statistics Endpoints
+@router.get("/{repo_id}/stats/ai-coding")
+async def get_ai_coding_stats(
+    repo_id: int,
+    days: int = Query(default=30, ge=1, le=365, description="Number of days to analyze"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get AI-powered coding statistics for a repository."""
+    repository = get_user_repository(repo_id, current_user, db)
+    
+    stats_service = StatisticsService(db)
+    return stats_service.get_ai_coding_stats(repo_id=repo_id, days=days)
+
+
+@router.get("/{repo_id}/stats/ai-authors")
+async def get_ai_author_stats(
+    repo_id: int,
+    days: int = Query(default=30, ge=1, le=365, description="Number of days to analyze"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get AI assistance statistics per author for a repository."""
+    repository = get_user_repository(repo_id, current_user, db)
+    
+    stats_service = StatisticsService(db)
+    return stats_service.get_author_ai_stats(repo_id, days)
+
+
+@router.get("/{repo_id}/stats/ai-trends")
+async def get_ai_trends(
+    repo_id: int,
+    days: int = Query(default=30, ge=1, le=90, description="Number of days to show trends"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get AI assistance trends over time for a repository."""
+    repository = get_user_repository(repo_id, current_user, db)
+    
+    stats_service = StatisticsService(db)
+    return stats_service.get_ai_trends_over_time(repo_id=repo_id, days=days)
+
+
+# Cross-repository AI statistics
+@stats_router.get("/ai-coding")
+async def get_overall_ai_coding_stats(
+    days: int = Query(default=30, ge=1, le=365, description="Number of days to analyze"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get overall AI-powered coding statistics across all user repositories."""
+    stats_service = StatisticsService(db)
+    return stats_service.get_ai_coding_stats(user_id=current_user.id, days=days)
+
+
+@stats_router.get("/ai-trends")
+async def get_overall_ai_trends(
+    days: int = Query(default=30, ge=1, le=90, description="Number of days to show trends"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get overall AI assistance trends over time across all user repositories."""
+    stats_service = StatisticsService(db)
+    return stats_service.get_ai_trends_over_time(user_id=current_user.id, days=days)

@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, distinct
-from ..core.models import Repository, DailyAuthorStats, Author, AnalysisJob
+from ..core.models import Repository, DailyAuthorStats, Author, AnalysisJob, Commit, CommitCoAuthor
 from ..schemas.statistics import (
     DailyStatsResponse, PeriodStatsResponse, AuthorStatsResponse,
     DailyBreakdownResponse, AuthorBreakdownResponse, RepoDailyResponse,
@@ -338,3 +338,185 @@ class StatisticsService:
             period_days=days,
             total_days_with_activity=days_with_activity
         )
+    
+    def get_ai_coding_stats(self, repo_id: Optional[int] = None, user_id: Optional[int] = None, 
+                           days: Optional[int] = None) -> Dict:
+        """Get AI-powered coding statistics."""
+        from sqlalchemy import case, exists
+        
+        # Build base query for commits
+        query = self.db.query(Commit)
+        
+        if repo_id:
+            query = query.filter(Commit.repository_id == repo_id)
+        elif user_id:
+            query = query.join(Repository).filter(Repository.user_id == user_id)
+        
+        # Apply date filter if specified
+        if days:
+            end_date = date.today()
+            start_date = end_date - timedelta(days=days-1)
+            query = query.filter(
+                func.date(Commit.commit_datetime) >= start_date,
+                func.date(Commit.commit_datetime) <= end_date
+            )
+        
+        # Get total stats and AI-assisted stats
+        total_result = query.with_entities(
+            func.sum(Commit.added_lines + Commit.deleted_lines).label('total_lines'),
+            func.count(Commit.id).label('total_commits')
+        ).first()
+        
+        # Query for AI-assisted commits
+        ai_subquery = self.db.query(CommitCoAuthor.commit_id).join(Author).filter(
+            Author.is_ai_coder == True
+        ).subquery()
+        
+        ai_result = query.filter(
+            Commit.id.in_(self.db.query(ai_subquery.c.commit_id))
+        ).with_entities(
+            func.sum(Commit.added_lines + Commit.deleted_lines).label('ai_lines'),
+            func.count(Commit.id).label('ai_commits')
+        ).first()
+        
+        total_lines = total_result.total_lines or 0
+        total_commits = total_result.total_commits or 0
+        ai_lines = ai_result.ai_lines or 0
+        ai_commits = ai_result.ai_commits or 0
+        
+        ai_lines_percentage = (ai_lines / total_lines * 100) if total_lines > 0 else 0
+        ai_commits_percentage = (ai_commits / total_commits * 100) if total_commits > 0 else 0
+        
+        return {
+            'total_lines': total_lines,
+            'ai_assisted_lines': ai_lines,
+            'ai_lines_percentage': round(ai_lines_percentage, 1),
+            'total_commits': total_commits,
+            'ai_assisted_commits': ai_commits,
+            'ai_commits_percentage': round(ai_commits_percentage, 1)
+        }
+    
+    def get_author_ai_stats(self, repo_id: int, days: int) -> List[Dict]:
+        """Get AI assistance statistics per author."""
+        from sqlalchemy import case
+        
+        end_date = date.today()
+        start_date = end_date - timedelta(days=days-1)
+        
+        # Get all authors with their commit stats
+        author_query = self.db.query(
+            Author.id,
+            Author.email,
+            Author.name,
+            Author.is_ai_coder,
+            func.sum(Commit.added_lines + Commit.deleted_lines).label('total_lines'),
+            func.count(Commit.id).label('total_commits')
+        ).join(Commit).filter(
+            Commit.repository_id == repo_id,
+            func.date(Commit.commit_datetime) >= start_date,
+            func.date(Commit.commit_datetime) <= end_date
+        ).group_by(Author.id, Author.email, Author.name, Author.is_ai_coder)
+        
+        authors_stats = []
+        
+        for author_result in author_query.all():
+            # Get AI-assisted stats for this author
+            ai_subquery = self.db.query(CommitCoAuthor.commit_id).join(Author).filter(
+                Author.is_ai_coder == True
+            ).subquery()
+            
+            ai_result = self.db.query(
+                func.sum(Commit.added_lines + Commit.deleted_lines).label('ai_lines'),
+                func.count(Commit.id).label('ai_commits')
+            ).filter(
+                Commit.author_id == author_result.id,
+                Commit.repository_id == repo_id,
+                func.date(Commit.commit_datetime) >= start_date,
+                func.date(Commit.commit_datetime) <= end_date,
+                Commit.id.in_(self.db.query(ai_subquery.c.commit_id))
+            ).first()
+            
+            total_lines = author_result.total_lines or 0
+            total_commits = author_result.total_commits or 0
+            ai_lines = ai_result.ai_lines or 0
+            ai_commits = ai_result.ai_commits or 0
+            
+            ai_lines_percentage = (ai_lines / total_lines * 100) if total_lines > 0 else 0
+            ai_commits_percentage = (ai_commits / total_commits * 100) if total_commits > 0 else 0
+            
+            authors_stats.append({
+                'author_id': author_result.id,
+                'author_email': author_result.email,
+                'author_name': author_result.name,
+                'is_ai_coder': author_result.is_ai_coder,
+                'total_lines': total_lines,
+                'ai_assisted_lines': ai_lines,
+                'ai_lines_percentage': round(ai_lines_percentage, 1),
+                'total_commits': total_commits,
+                'ai_assisted_commits': ai_commits,
+                'ai_commits_percentage': round(ai_commits_percentage, 1)
+            })
+        
+        # Sort by total activity
+        authors_stats.sort(key=lambda x: x['total_lines'], reverse=True)
+        return authors_stats
+    
+    def get_ai_trends_over_time(self, repo_id: Optional[int] = None, user_id: Optional[int] = None, 
+                               days: int = 30) -> List[Dict]:
+        """Get AI assistance trends over time (daily breakdown)."""
+        end_date = date.today()
+        start_date = end_date - timedelta(days=days-1)
+        
+        # Build base query
+        query = self.db.query(Commit)
+        
+        if repo_id:
+            query = query.filter(Commit.repository_id == repo_id)
+        elif user_id:
+            query = query.join(Repository).filter(Repository.user_id == user_id)
+        
+        query = query.filter(
+            func.date(Commit.commit_datetime) >= start_date,
+            func.date(Commit.commit_datetime) <= end_date
+        )
+        
+        # Get AI commit IDs
+        ai_commit_ids = self.db.query(CommitCoAuthor.commit_id).join(Author).filter(
+            Author.is_ai_coder == True
+        ).all()
+        ai_commit_ids_set = {row[0] for row in ai_commit_ids}
+        
+        # Group by date
+        daily_trends = []
+        current_date = start_date
+        
+        while current_date <= end_date:
+            # Get commits for this day
+            day_commits = query.filter(
+                func.date(Commit.commit_datetime) == current_date
+            ).all()
+            
+            total_lines = sum(commit.added_lines + commit.deleted_lines for commit in day_commits)
+            total_commits = len(day_commits)
+            
+            ai_lines = sum(
+                commit.added_lines + commit.deleted_lines 
+                for commit in day_commits 
+                if commit.id in ai_commit_ids_set
+            )
+            ai_commits = sum(1 for commit in day_commits if commit.id in ai_commit_ids_set)
+            
+            ai_lines_percentage = (ai_lines / total_lines * 100) if total_lines > 0 else 0
+            
+            daily_trends.append({
+                'date': current_date.isoformat(),
+                'total_lines': total_lines,
+                'ai_assisted_lines': ai_lines,
+                'ai_lines_percentage': round(ai_lines_percentage, 1),
+                'total_commits': total_commits,
+                'ai_assisted_commits': ai_commits
+            })
+            
+            current_date += timedelta(days=1)
+        
+        return daily_trends

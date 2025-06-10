@@ -51,10 +51,37 @@ export const useApi = () => {
     }
   }
 
+  // AI Statistics API methods
+  const getAiCodingStats = async (repoId: number, days: number = 30) => {
+    return request(() => api.get(`/repositories/${repoId}/stats/ai-coding?days=${days}`))
+  }
+
+  const getAiAuthorStats = async (repoId: number, days: number = 30) => {
+    return request(() => api.get(`/repositories/${repoId}/stats/ai-authors?days=${days}`))
+  }
+
+  const getAiTrends = async (repoId: number, days: number = 30) => {
+    return request(() => api.get(`/repositories/${repoId}/stats/ai-trends?days=${days}`))
+  }
+
+  const getOverallAiStats = async (days: number = 30) => {
+    return request(() => api.get(`/stats/ai-coding?days=${days}`))
+  }
+
+  const getOverallAiTrends = async (days: number = 30) => {
+    return request(() => api.get(`/stats/ai-trends?days=${days}`))
+  }
+
   return {
     api,
     loading: computed(() => loading.value),
     error: computed(() => error.value),
     request,
+    // AI Statistics methods
+    getAiCodingStats,
+    getAiAuthorStats,
+    getAiTrends,
+    getOverallAiStats,
+    getOverallAiTrends,
   }
 }

@@ -151,7 +151,104 @@
             </div>
           </div>
 
-          <!-- Overall Trends Chart -->
+          <!-- AI Coding Statistics Row -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- AI Assistance Percentage -->
+            <div class="bg-white overflow-hidden shadow-lg rounded-lg border border-gray-200">
+              <div class="p-6">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0">
+                    <div class="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="ml-6 w-0 flex-1">
+                    <dl>
+                      <dt class="text-sm font-medium text-gray-500 truncate">
+                        AI-Assisted Code
+                      </dt>
+                      <dd class="text-2xl font-bold text-orange-600">
+                        {{ aiStats?.ai_lines_percentage ?? '0.0' }}%
+                      </dd>
+                      <dd class="text-xs text-gray-400">{{ aiStats?.ai_assisted_lines?.toLocaleString() ?? '0' }} of {{ aiStats?.total_lines?.toLocaleString() ?? '0' }} lines</dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Commits -->
+            <div class="bg-white overflow-hidden shadow-lg rounded-lg border border-gray-200">
+              <div class="p-6">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0">
+                    <div class="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="ml-6 w-0 flex-1">
+                    <dl>
+                      <dt class="text-sm font-medium text-gray-500 truncate">
+                        AI-Assisted Commits
+                      </dt>
+                      <dd class="text-2xl font-bold text-purple-600">
+                        {{ aiStats?.ai_assisted_commits?.toLocaleString() ?? '0' }}
+                      </dd>
+                      <dd class="text-xs text-gray-400">{{ aiStats?.ai_commits_percentage ?? '0.0' }}% of all commits</dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Trend Indicator -->
+            <div class="bg-white overflow-hidden shadow-lg rounded-lg border border-gray-200">
+              <div class="p-6">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0">
+                    <div class="w-12 h-12 rounded-lg flex items-center justify-center" :class="{
+                      'bg-green-500': aiTrendDirection === 'up',
+                      'bg-red-500': aiTrendDirection === 'down',
+                      'bg-gray-500': aiTrendDirection === 'stable'
+                    }">
+                      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="getTrendIcon()"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="ml-6 w-0 flex-1">
+                    <dl>
+                      <dt class="text-sm font-medium text-gray-500 truncate">
+                        AI Trend
+                      </dt>
+                      <dd class="text-2xl font-bold" :class="{
+                        'text-green-600': aiTrendDirection === 'up',
+                        'text-red-600': aiTrendDirection === 'down',
+                        'text-gray-600': aiTrendDirection === 'stable'
+                      }">
+                        {{ aiTrendDirection === 'up' ? 'Rising' : aiTrendDirection === 'down' ? 'Falling' : 'Stable' }}
+                      </dd>
+                      <dd class="text-xs text-gray-400">{{ Math.abs(aiTrendChange).toFixed(1) }}% change</dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Assistance Trends Chart -->
+          <div v-if="aiTrends.length > 0" class="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">AI Assistance Trends</h3>
+            <div class="h-80">
+              <canvas ref="aiTrendsChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Overall Activity Trends Chart -->
           <div v-if="dailyTrends.length > 0" class="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
             <h3 class="text-lg font-medium text-gray-900 mb-4">Cross-Repository Activity Trends</h3>
             <div class="h-80">
@@ -359,7 +456,7 @@ interface AuthorSummary {
   deleted_lines: number
 }
 
-const { api, loading, error } = useApi()
+const { api, loading, error, getOverallAiStats, getOverallAiTrends } = useApi()
 const repositories = ref<Repository[]>([])
 const selectedDays = ref(7)
 const excludeAI = ref(false)
@@ -367,6 +464,13 @@ const overallStats = ref<OverallStats | null>(null)
 const dailyTrends = ref<DailyTrend[]>([])
 const topAuthors = ref<AuthorSummary[]>([])
 const trendsChart = ref<HTMLCanvasElement>()
+
+// AI Statistics
+const aiStats = ref<any>(null)
+const aiTrends = ref<any[]>([])
+const aiTrendsChart = ref<HTMLCanvasElement>()
+const aiTrendDirection = ref<'up' | 'down' | 'stable'>('stable')
+const aiTrendChange = ref(0)
 
 const netChange = computed(() => {
   if (!overallStats.value) return 0
@@ -402,6 +506,225 @@ const fetchRepositories = async () => {
   } catch (err) {
     console.error('Failed to fetch repositories:', err)
   }
+}
+
+const getTrendIcon = () => {
+  switch (aiTrendDirection.value) {
+    case 'up':
+      return 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'
+    case 'down':
+      return 'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6'
+    default:
+      return 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
+  }
+}
+
+const fetchAiStats = async () => {
+  if (repositories.value.length === 0) return
+  
+  try {
+    // Fetch overall AI statistics
+    const aiStatsResponse = await getOverallAiStats(selectedDays.value)
+    if (aiStatsResponse?.data) {
+      aiStats.value = aiStatsResponse.data
+    }
+
+    // Fetch AI trends
+    const aiTrendsResponse = await getOverallAiTrends(selectedDays.value)
+    if (aiTrendsResponse?.data) {
+      aiTrends.value = aiTrendsResponse.data
+      calculateAiTrend()
+      await nextTick()
+      updateAiTrendsChart()
+    }
+  } catch (err) {
+    console.error('Failed to fetch AI statistics:', err)
+  }
+}
+
+const calculateAiTrend = () => {
+  if (aiTrends.value.length < 2) {
+    aiTrendDirection.value = 'stable'
+    aiTrendChange.value = 0
+    return
+  }
+
+  const recentDays = aiTrends.value.slice(-7) // Last 7 days
+  const olderDays = aiTrends.value.slice(-14, -7) // Previous 7 days
+
+  const recentAvg = recentDays.reduce((sum, day) => sum + day.ai_lines_percentage, 0) / recentDays.length
+  const olderAvg = olderDays.length > 0 ? olderDays.reduce((sum, day) => sum + day.ai_lines_percentage, 0) / olderDays.length : recentAvg
+
+  aiTrendChange.value = recentAvg - olderAvg
+
+  if (Math.abs(aiTrendChange.value) < 1) {
+    aiTrendDirection.value = 'stable'
+  } else if (aiTrendChange.value > 0) {
+    aiTrendDirection.value = 'up'
+  } else {
+    aiTrendDirection.value = 'down'
+  }
+}
+
+const updateAiTrendsChart = () => {
+  if (!aiTrendsChart.value || aiTrends.value.length === 0) return
+  
+  const ctx = aiTrendsChart.value.getContext('2d')
+  if (!ctx) return
+  
+  // Destroy existing chart
+  if ((aiTrendsChart.value as any).chart) {
+    (aiTrendsChart.value as any).chart.destroy()
+  }
+  
+  const labels = aiTrends.value.map(trend => 
+    new Date(trend.date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    })
+  )
+  
+  const aiPercentages = aiTrends.value.map(trend => trend.ai_lines_percentage)
+  const aiLines = aiTrends.value.map(trend => trend.ai_assisted_lines)
+  const totalLines = aiTrends.value.map(trend => trend.total_lines)
+  
+  const chart = new ChartJS(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'AI Assistance %',
+          data: aiPercentages,
+          borderColor: 'rgb(249, 115, 22)',
+          backgroundColor: 'rgba(249, 115, 22, 0.1)',
+          borderWidth: 3,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          pointBackgroundColor: 'rgb(249, 115, 22)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          yAxisID: 'y'
+        },
+        {
+          label: 'AI-Assisted Lines',
+          data: aiLines,
+          borderColor: 'rgb(168, 85, 247)',
+          backgroundColor: 'rgba(168, 85, 247, 0.1)',
+          borderWidth: 3,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          pointBackgroundColor: 'rgb(168, 85, 247)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          fill: false,
+          tension: 0.4,
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      plugins: {
+        title: {
+          display: true,
+          text: `AI Assistance Trends - Last ${selectedDays.value} Days`,
+          font: {
+            size: 16,
+            weight: 'bold'
+          }
+        },
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            padding: 20
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleColor: '#fff',
+          bodyColor: '#fff',
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          borderWidth: 1,
+          cornerRadius: 8,
+          displayColors: true,
+          callbacks: {
+            label: function(context) {
+              const label = context.dataset.label || ''
+              const value = context.parsed.y
+              if (label.includes('%')) {
+                return `${label}: ${value.toFixed(1)}%`
+              }
+              return `${label}: ${value.toLocaleString()}`
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            color: 'rgba(0, 0, 0, 0.1)'
+          }
+        },
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          title: {
+            display: true,
+            text: 'AI Assistance %',
+            font: {
+              size: 12,
+              weight: 'bold'
+            }
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.1)'
+          },
+          min: 0,
+          max: 100,
+          ticks: {
+            callback: function(value) {
+              return typeof value === 'number' ? value.toFixed(0) + '%' : value
+            }
+          }
+        },
+        y1: {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          title: {
+            display: true,
+            text: 'Lines of Code',
+            font: {
+              size: 12,
+              weight: 'bold'
+            }
+          },
+          grid: {
+            drawOnChartArea: false,
+          },
+          ticks: {
+            callback: function(value) {
+              return typeof value === 'number' ? value.toLocaleString() : value
+            }
+          }
+        }
+      }
+    }
+  })
+  
+  // Store chart reference for cleanup
+  ;(aiTrendsChart.value as any).chart = chart
 }
 
 const fetchOverallStats = async () => {
@@ -516,6 +839,9 @@ const fetchOverallStats = async () => {
     // Update chart
     await nextTick()
     updateTrendsChart()
+    
+    // Fetch AI statistics
+    await fetchAiStats()
   } catch (err) {
     console.error('Failed to fetch overall statistics:', err)
   }
