@@ -4,12 +4,21 @@
       <div class="border-4 border-dashed border-gray-200 rounded-lg p-6">
         <div class="flex justify-between items-center mb-6">
           <h1 class="text-2xl font-bold text-gray-900">Repositories</h1>
-          <button
-            @click="showAddForm = true"
-            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-          >
-            Add Repository
-          </button>
+          <div class="flex space-x-3">
+            <button
+              @click="analyzeAllRepositories"
+              :disabled="analyzingAll || repositories.length === 0"
+              class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
+            >
+              {{ analyzingAll ? 'Analyzing All...' : 'Analyze All' }}
+            </button>
+            <button
+              @click="showAddForm = true"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            >
+              Add Repository
+            </button>
+          </div>
         </div>
 
         <!-- Add Repository Form -->
@@ -147,6 +156,7 @@ const showAddForm = ref(false)
 const adding = ref(false)
 const analyzingRepo = ref<number | null>(null)
 const deletingRepo = ref<number | null>(null)
+const analyzingAll = ref(false)
 
 const newRepo = reactive({
   name: '',
@@ -206,6 +216,33 @@ const analyzeRepository = async (repoId: number) => {
   } catch (err) {
     console.error('Failed to analyze repository:', err)
   } finally {
+    analyzingRepo.value = null
+  }
+}
+
+const analyzeAllRepositories = async () => {
+  if (repositories.value.length === 0) return
+  
+  analyzingAll.value = true
+  try {
+    // Analyze repositories sequentially to avoid overwhelming the system
+    for (const repo of repositories.value) {
+      analyzingRepo.value = repo.id
+      try {
+        await api.post(`/repositories/${repo.id}/analyze`, {
+          days: 30,
+          force_refresh: false
+        })
+      } catch (err) {
+        console.error(`Failed to analyze repository ${repo.name}:`, err)
+      }
+    }
+    // Refresh repositories to get updated last_analyzed_at for all
+    await fetchRepositories()
+  } catch (err) {
+    console.error('Failed to analyze all repositories:', err)
+  } finally {
+    analyzingAll.value = false
     analyzingRepo.value = null
   }
 }
