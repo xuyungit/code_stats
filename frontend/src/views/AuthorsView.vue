@@ -531,56 +531,41 @@ const fetchAuthorsData = async () => {
           existingAuthor.activity_score = (existingAuthor.commits_count * 10) + existingAuthor.added_lines + (existingAuthor.deleted_lines * 0.2)
         })
         
-        // Generate synthetic daily data for chart visualization
-        // Since we have summary stats, distribute them across the time period
-        repoAuthors.forEach((author: any) => {
-          if (author.commits_count > 0) {
-            const authorEmail = author.author_email
-            if (!dailyDataMap.has(authorEmail)) {
-              dailyDataMap.set(authorEmail, [])
+        // Fetch real daily author data from the API
+        try {
+          const dailyAuthorResponse = await api.get(`/repositories/${repo.id}/stats/daily-authors`, {
+            params: { 
+              days: selectedDays.value,
+              exclude_ai: excludeAI.value
             }
+          })
+          
+          const repoDailyData = dailyAuthorResponse.data.daily_stats || []
+          repoDailyData.forEach((dayData: any) => {
+            const date = dayData.date
+            const dayAuthors = dayData.authors || []
             
-            // Create daily data points by distributing total activity across days
-            const dateRange = []
-            for (let i = selectedDays.value - 1; i >= 0; i--) {
-              const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
-              dateRange.push(date.toISOString().split('T')[0])
-            }
-            
-            // Distribute activity across days (simplified approach)
-            const dailyCommitAvg = author.commits_count / selectedDays.value
-            const dailyAddedAvg = author.added_lines / selectedDays.value
-            const dailyDeletedAvg = author.deleted_lines / selectedDays.value
-            
-            dateRange.forEach((date, index) => {
-              const existingData = dailyDataMap.get(authorEmail)!.find(d => d.date === date)
-              if (!existingData) {
-                // Create some variation - more activity in recent days
-                const dayWeight = (selectedDays.value - index) / selectedDays.value
-                const variation = 0.5 + Math.random() * 1.5 // Random variation 0.5-2.0x
-                
-                dailyDataMap.get(authorEmail)!.push({
-                  date,
-                  author_email: author.author_email,
-                  author_name: author.author_name,
-                  commits_count: Math.round(dailyCommitAvg * dayWeight * variation),
-                  added_lines: Math.round(dailyAddedAvg * dayWeight * variation),
-                  deleted_lines: Math.round(dailyDeletedAvg * dayWeight * variation),
-                  files_changed: Math.round((author.total_files_changed || 0) / selectedDays.value * dayWeight * variation)
-                })
-              } else {
-                // Aggregate if author appears in multiple repos
-                const dayWeight = (selectedDays.value - index) / selectedDays.value
-                const variation = 0.5 + Math.random() * 1.5
-                
-                existingData.commits_count += Math.round(dailyCommitAvg * dayWeight * variation)
-                existingData.added_lines += Math.round(dailyAddedAvg * dayWeight * variation)
-                existingData.deleted_lines += Math.round(dailyDeletedAvg * dayWeight * variation)
-                existingData.files_changed += Math.round((author.total_files_changed || 0) / selectedDays.value * dayWeight * variation)
+            dayAuthors.forEach((authorData: any) => {
+              const authorEmail = authorData.author.email
+              if (!dailyDataMap.has(authorEmail)) {
+                dailyDataMap.set(authorEmail, [])
               }
+              
+              // Add real daily data
+              dailyDataMap.get(authorEmail)!.push({
+                date: date,
+                author_email: authorData.author.email,
+                author_name: authorData.author.name,
+                commits_count: authorData.commits_count || 0,
+                added_lines: authorData.added_lines || 0,
+                deleted_lines: authorData.deleted_lines || 0,
+                files_changed: authorData.files_changed || 0
+              })
             })
-          }
-        })
+          })
+        } catch (err) {
+          console.error(`Failed to fetch daily author data for repo ${repo.id}:`, err)
+        }
       } catch (err) {
         console.error(`Failed to fetch authors for repo ${repo.id}:`, err)
       }
