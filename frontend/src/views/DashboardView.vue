@@ -838,7 +838,10 @@ const fetchOverallStats = async () => {
     
     // Update chart
     await nextTick()
-    updateTrendsChart()
+    // Add a small delay to ensure the container is properly rendered
+    setTimeout(() => {
+      updateTrendsChart()
+    }, 100)
     
     // Fetch AI statistics
     await fetchAiStats()
@@ -849,6 +852,13 @@ const fetchOverallStats = async () => {
 
 const updateTrendsChart = () => {
   if (!trendsChart.value || dailyTrends.value.length === 0) return
+  
+  // Check if canvas has proper dimensions
+  const rect = trendsChart.value.getBoundingClientRect()
+  if (rect.width === 0 || rect.height === 0) {
+    setTimeout(() => updateTrendsChart(), 200)
+    return
+  }
   
   const ctx = trendsChart.value.getContext('2d')
   if (!ctx) return
@@ -936,7 +946,7 @@ const updateTrendsChart = () => {
       plugins: {
         title: {
           display: true,
-          text: `Overall Repository Activity - Last ${selectedDays} Days`,
+          text: `Overall Repository Activity - Last ${selectedDays.value} Days`,
           font: {
             size: 16,
             weight: 'bold'
