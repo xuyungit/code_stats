@@ -166,13 +166,41 @@
             </div>
           </div>
 
-          <!-- Authors Activity Chart -->
+          <!-- Authors Commits Chart -->
           <div v-if="dailyAuthorsData.length > 0" class="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">
-              Top {{ chartTopN }} Authors Daily Activity
-            </h3>
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-medium text-gray-900">Authors Commits Over Time</h3>
+              <select
+                v-model="chartTopN"
+                @change="updateChart"
+                class="border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              >
+                <option value="3">Top 3 Authors</option>
+                <option value="5">Top 5 Authors</option>
+                <option value="10">Top 10 Authors</option>
+              </select>
+            </div>
             <div class="h-80">
               <canvas ref="authorsChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Authors Code Added Chart -->
+          <div v-if="dailyAuthorsData.length > 0" class="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-medium text-gray-900">Authors Code Added Over Time</h3>
+              <select
+                v-model="codeAddedChartTopN"
+                @change="updateCodeAddedChart"
+                class="border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              >
+                <option value="3">Top 3 Authors</option>
+                <option value="5">Top 5 Authors</option>
+                <option value="10">Top 10 Authors</option>
+              </select>
+            </div>
+            <div class="h-80">
+              <canvas ref="codeAddedChart"></canvas>
             </div>
           </div>
 
@@ -362,6 +390,8 @@ const repositories = ref<Repository[]>([])
 const allAuthors = ref<AuthorSummary[]>([])
 const dailyAuthorsData = ref<DailyAuthorData[]>([])
 const authorsChart = ref<HTMLCanvasElement>()
+const codeAddedChart = ref<HTMLCanvasElement>()
+const codeAddedChartTopN = ref(5)
 
 const activeAuthors = computed(() => 
   allAuthors.value.filter(author => author.commits_count > 0)
@@ -528,9 +558,10 @@ const fetchAuthorsData = async () => {
     })
     dailyAuthorsData.value = allDailyData
     
-    // Update chart
+    // Update charts
     await nextTick()
     updateChart()
+    updateCodeAddedChart()
   } catch (err) {
     console.error('Failed to fetch authors data:', err)
   }
@@ -547,9 +578,9 @@ const updateChart = () => {
     (authorsChart.value as any).chart.destroy()
   }
   
-  // Get top N authors by activity score
+  // Get top N authors by commits count
   const topAuthors = [...allAuthors.value]
-    .sort((a, b) => b.activity_score - a.activity_score)
+    .sort((a, b) => b.commits_count - a.commits_count)
     .slice(0, chartTopN.value)
   
   if (topAuthors.length === 0) return
@@ -587,9 +618,7 @@ const updateChart = () => {
       const authorData = dailyAuthorsData.value.filter(data => 
         data.date === date && data.author_email === author.author_email
       )
-      return authorData.reduce((sum, data) => 
-        sum + data.commits_count + Math.abs(data.added_lines - data.deleted_lines), 0
-      )
+      return authorData.reduce((sum, data) => sum + data.commits_count, 0)
     })
     
     return {
@@ -624,7 +653,7 @@ const updateChart = () => {
       plugins: {
         title: {
           display: true,
-          text: `Top ${chartTopN.value} Authors Activity Over Time`,
+          text: `Top ${chartTopN.value} Authors Commits Over Time`,
           font: {
             size: 16,
             weight: 'bold'
@@ -653,10 +682,7 @@ const updateChart = () => {
             label: function(context) {
               const authorName = context.dataset.label || ''
               const value = context.parsed.y
-              return `${authorName}: ${value.toLocaleString()} activity points`
-            },
-            afterBody: function(context) {
-              return 'Activity = Commits + |Net Lines Changed|'
+              return `${authorName}: ${value.toLocaleString()} commits`
             }
           }
         }
@@ -670,7 +696,7 @@ const updateChart = () => {
         y: {
           title: {
             display: true,
-            text: 'Activity Score',
+            text: 'Commits Count',
             font: {
               size: 12,
               weight: 'bold'
@@ -691,6 +717,158 @@ const updateChart = () => {
   
   // Store chart reference for cleanup
   ;(authorsChart.value as any).chart = chart
+}
+
+const updateCodeAddedChart = () => {
+  if (!codeAddedChart.value || dailyAuthorsData.value.length === 0) return
+  
+  const ctx = codeAddedChart.value.getContext('2d')
+  if (!ctx) return
+  
+  // Destroy existing chart
+  if ((codeAddedChart.value as any).chart) {
+    (codeAddedChart.value as any).chart.destroy()
+  }
+  
+  // Get top N authors by added lines
+  const topAuthors = [...allAuthors.value]
+    .sort((a, b) => b.added_lines - a.added_lines)
+    .slice(0, codeAddedChartTopN.value)
+  
+  if (topAuthors.length === 0) return
+  
+  // Get unique dates and sort them
+  const uniqueDates = [...new Set(dailyAuthorsData.value.map(data => data.date))]
+    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+  
+  const labels = uniqueDates.map(date => 
+    new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    })
+  )
+  
+  // Create datasets for each top author
+  const datasets = topAuthors.map((author, index) => {
+    const colors = [
+      'rgb(34, 197, 94)',    // green
+      'rgb(59, 130, 246)',   // blue  
+      'rgb(239, 68, 68)',    // red
+      'rgb(168, 85, 247)',   // purple
+      'rgb(245, 158, 11)',   // amber
+      'rgb(20, 184, 166)',   // teal
+      'rgb(244, 63, 94)',    // rose
+      'rgb(139, 92, 246)',   // violet
+      'rgb(34, 211, 238)',   // cyan
+      'rgb(251, 146, 60)'    // orange
+    ]
+    
+    const color = colors[index % colors.length]
+    
+    // Get daily added lines for this author
+    const dailyActivity = uniqueDates.map(date => {
+      const authorData = dailyAuthorsData.value.filter(data => 
+        data.date === date && data.author_email === author.author_email
+      )
+      return authorData.reduce((sum, data) => sum + data.added_lines, 0)
+    })
+    
+    return {
+      label: author.author_name + (author.is_ai_coder ? ' (AI)' : ''),
+      data: dailyActivity,
+      borderColor: color,
+      backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.1)'),
+      borderWidth: 3,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      pointBackgroundColor: color,
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      fill: false,
+      tension: 0.4,
+    }
+  })
+  
+  const chart = new ChartJS(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      plugins: {
+        title: {
+          display: true,
+          text: `Top ${codeAddedChartTopN.value} Authors Code Added Over Time`,
+          font: {
+            size: 16,
+            weight: 'bold'
+          }
+        },
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            padding: 15
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleColor: '#fff',
+          bodyColor: '#fff',
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          borderWidth: 1,
+          cornerRadius: 8,
+          displayColors: true,
+          callbacks: {
+            title: function(context) {
+              return `${labels[context[0].dataIndex]}`
+            },
+            label: function(context) {
+              const authorName = context.dataset.label || ''
+              const value = context.parsed.y
+              return `${authorName}: ${value.toLocaleString()} lines added`
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            color: 'rgba(0, 0, 0, 0.1)'
+          }
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Lines Added',
+            font: {
+              size: 12,
+              weight: 'bold'
+            }
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.1)'
+          },
+          ticks: {
+            callback: function(value) {
+              return typeof value === 'number' ? value.toLocaleString() : value
+            }
+          }
+        }
+      }
+    }
+  })
+  
+  // Store chart reference for cleanup
+  ;(codeAddedChart.value as any).chart = chart
 }
 
 onMounted(async () => {

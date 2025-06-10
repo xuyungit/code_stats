@@ -1,0 +1,72 @@
+warning: `VIRTUAL_ENV=/Users/xuyun/.pyenv/versions/tools` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+INFO:     Will watch for changes in these directories: ['/Users/xuyun/AI/code_stats']
+INFO:     Uvicorn running on http://127.0.0.1:8002 (Press CTRL+C to quit)
+INFO:     Started reloader process [44202] using WatchFiles
+INFO:     Started server process [44204]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+(trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/Users/xuyun/AI/code_stats/.venv/lib/python3.13/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+Starting up Git Stats API...
+Database migrations completed successfully
+INFO:     127.0.0.1:58917 - "POST /auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58917 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58917 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58917 - "POST /repositories/ HTTP/1.1" 200 OK
+Error analyzing day 2025-06-09: 'AuthorStats' object is not subscriptable
+INFO:     127.0.0.1:58917 - "POST /repositories/1/analyze HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58917 - "GET /repositories/1/stats/period?days=7 HTTP/1.1" 404 Not Found
+WARNING:  WatchFiles detected changes in 'backend/app/statistics/analyzer.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [44204]
+INFO:     Started server process [44339]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Starting up Git Stats API...
+Database migrations completed successfully
+INFO:     127.0.0.1:59112 - "POST /auth/register HTTP/1.1" 400 Bad Request
+WARNING:  WatchFiles detected changes in 'test_api.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [44339]
+INFO:     Started server process [44375]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'test_api.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [44375]
+INFO:     Started server process [44392]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+(trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/Users/xuyun/AI/code_stats/.venv/lib/python3.13/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+Starting up Git Stats API...
+Database migrations completed successfully
+INFO:     127.0.0.1:59249 - "POST /auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59249 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59249 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59249 - "POST /repositories/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59249 - "POST /repositories/2/analyze HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59249 - "GET /repositories/2/stats/period?days=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59341 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59341 - "GET /repositories/2/stats/daily?days=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59341 - "GET /repositories/2/stats/authors?days=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59341 - "GET /repositories/2/jobs HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [44392]
+INFO:     Stopping reloader process [44202]
