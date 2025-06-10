@@ -9,3 +9,14 @@ wheels/
 # Virtual environments
 .venv
 .claude-trace/
+
+# Database files
+*.db
+git_stats.db
+
+# Log files
+*.log
+server.log
+
+# Development files
+.python-version
