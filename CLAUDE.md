@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This repository contains a web-based service for analyzing git repository code activity and statistics. Originally a command-line tool, it has been expanded into a multi-user web service with REST API and database storage for tracking development metrics over time.
+This repository contains a web-based service for analyzing git repository code activity and statistics. It's a multi-user web service with REST API and database storage for tracking development metrics over time.
 
 ## Memory Log
 
@@ -12,12 +12,11 @@ This repository contains a web-based service for analyzing git repository code a
 
 ## Architecture
 
-### Command-Line Tools (Original)
-- Python-based CLI tools that interface with git repositories via subprocess calls
-- Modular functions for different time-based analysis (period ranges vs daily breakdowns)
+### Get statistics from git repositories
+
 - Uses git's native commands for data extraction and diff analysis
 
-### Web Service (Current)
+### Web Service
 - **Backend**: FastAPI-based REST API with SQLAlchemy ORM
 - **Database**: SQLite (development) with migration path to PostgreSQL/MySQL
 - **Authentication**: JWT-based user authentication
@@ -26,7 +25,8 @@ This repository contains a web-based service for analyzing git repository code a
 
 ## Key Features
 
-### CLI Features
+### Git Analyze Features
+
 - Analyze code activity over configurable time periods
 - Daily breakdown of development statistics
 - Track commits, lines added/deleted, files changed, and net activity
@@ -63,16 +63,7 @@ This repository contains a web-based service for analyzing git repository code a
 
 ## Running Tools
 
-### CLI (Original)
-```bash
-# Basic usage with default settings
-python git_stats.py /path/to/repo
-
-# Custom time period analysis
-python git_stats.py /path/to/repo --days N
-```
-
-### Full-Stack Web Application (Status: Complete ✅)
+### Full-Stack Web Application
 
 Virtual environment is at .venv directory of the workspace
 ```bash
@@ -86,7 +77,7 @@ uv run uvicorn backend.app.main:app --reload --port 8002
 
 #### Technology Stack:
 - **Backend**: FastAPI + SQLAlchemy + SQLite + JWT authentication
-- **Frontend**: Vue 3 + TypeScript + Tailwind CSS + Chart.js + Vite
+- **Frontend**: Vue 3 + TypeScript + Tailwind CSS 4 + Chart.js + Vite
 - **Integration**: FastAPI serves Vue SPA with API routes prefixed with `/api/`
 
 #### Features Available:
@@ -97,12 +88,39 @@ uv run uvicorn backend.app.main:app --reload --port 8002
 - **Responsive Design**: Modern, clean UI that works on desktop and mobile
 
 #### API Endpoints Available:
-- **Authentication**: `/api/auth/register`, `/api/auth/login`, `/api/auth/me`
-- **Repositories**: `/api/repositories/` (CRUD operations)
-- **Single-Repo Statistics**: `/api/repositories/{id}/stats/period`, `/api/repositories/{id}/stats/daily`, `/api/repositories/{id}/stats/authors`
-- **Cross-Repo Statistics**: `/api/stats/repo-daily` (unified daily stats with author breakdown)
-- **Analysis**: `/api/repositories/{id}/analyze` (trigger git analysis)
-- **Jobs**: `/api/repositories/{id}/jobs` (track analysis status)
+
+**Core & Health:**
+- **GET** `/api/` - API info and version
+- **GET** `/api/health` - Health check
+
+**Authentication:**
+- **POST** `/api/auth/register` - Register new user
+- **POST** `/api/auth/login` - Login and get access token
+- **GET** `/api/auth/me` - Get current user info
+- **POST** `/api/auth/refresh` - Refresh access token
+
+**Repository Management:**
+- **GET** `/api/repositories/` - List user repositories
+- **POST** `/api/repositories/` - Create repository
+- **GET** `/api/repositories/{id}` - Get repository details
+- **PUT** `/api/repositories/{id}` - Update repository
+- **DELETE** `/api/repositories/{id}` - Delete repository
+- **GET** `/api/repositories/{id}/authors` - List repository authors
+- **PUT** `/api/repositories/authors/{author_id}` - Update author (AI flagging)
+
+**Single-Repository Statistics:**
+- **GET** `/api/repositories/{id}/stats/period` - Aggregated period stats
+- **GET** `/api/repositories/{id}/stats/daily` - Daily breakdown stats
+- **GET** `/api/repositories/{id}/stats/authors` - Author breakdown stats
+- **GET** `/api/repositories/{id}/stats/daily-authors` - Daily stats with author details
+
+**Analysis & Jobs:**
+- **POST** `/api/repositories/{id}/analyze` - Trigger git analysis
+- **GET** `/api/repositories/{id}/jobs` - List analysis jobs
+- **GET** `/api/repositories/{id}/jobs/{job_id}` - Get job details
+
+**Cross-Repository Statistics:**
+- **GET** `/api/stats/repo-daily` - Multi-repo daily stats with author breakdown
 
 ## Development Guidelines
 
