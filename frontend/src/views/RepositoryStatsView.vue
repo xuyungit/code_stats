@@ -566,7 +566,7 @@ const fetchStats = async () => {
   }
 }
 
-const applyFilters = () => {
+const applyFilters = async () => {
   // Clear cached daily author details when filters change
   dailyAuthorDetails.value.clear()
   expandedRows.value.clear()
@@ -589,11 +589,10 @@ const applyFilters = () => {
   })
 
   // Update charts
-  nextTick(() => {
-    updateChart()
-    updateAuthorChart()
-    updateCodeAddedChart()
-  })
+  await nextTick()
+  updateChart()
+  await updateAuthorChart()
+  await updateCodeAddedChart()
 }
 
 const updateChart = () => {
@@ -792,7 +791,7 @@ const updateChart = () => {
   ;(dailyChart.value as any).chart = chart
 }
 
-const updateAuthorChart = () => {
+const updateAuthorChart = async () => {
   if (!authorChart.value || filteredAuthorStats.value.length === 0) return
 
   const ctx = authorChart.value.getContext('2d')
@@ -814,7 +813,22 @@ const updateAuthorChart = () => {
 
   if (authorsToShow.length === 0) return
 
-  // Create synthetic daily data for each author based on their total contributions
+  // Fetch real daily author data
+  let dailyAuthorData: any[] = []
+  try {
+    const response = await api.get(`/repositories/${repoId}/stats/daily-authors`, {
+      params: { 
+        days: selectedDays.value,
+        exclude_ai: excludeAI.value
+      }
+    })
+    dailyAuthorData = response.data.daily_stats || []
+  } catch (error) {
+    console.error('Failed to fetch daily author data for chart:', error)
+    return
+  }
+
+  // Create date range for labels
   const dateRange: string[] = []
   for (let i = selectedDays.value - 1; i >= 0; i--) {
     const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
@@ -828,7 +842,7 @@ const updateAuthorChart = () => {
     })
   )
 
-  // Create datasets for each author
+  // Create datasets for each author using real daily data
   const datasets = authorsToShow.map((author, index) => {
     const colors = [
       'rgb(59, 130, 246)',   // blue
@@ -845,18 +859,13 @@ const updateAuthorChart = () => {
     
     const color = colors[index % colors.length]
     
-    // Generate daily commits data (distributed across the period with some variation)
-    const dailyActivity = dateRange.map((_, dayIndex) => {
-      // Create realistic daily commits distribution
-      const totalCommits = author.commits_count
-      const dailyAverage = totalCommits / selectedDays.value
+    // Get real daily commits data for this author
+    const dailyActivity = dateRange.map(date => {
+      const dayData = dailyAuthorData.find(d => d.date === date)
+      if (!dayData || !dayData.authors) return 0
       
-      // Add some variation - more activity in recent days and some randomness
-      const dayWeight = (selectedDays.value - dayIndex) / selectedDays.value
-      const randomVariation = 0.3 + Math.random() * 1.4 // 0.3 to 1.7x variation
-      const dailyValue = Math.max(0, Math.round(dailyAverage * dayWeight * randomVariation))
-      
-      return dailyValue
+      const authorData = dayData.authors.find((a: any) => a.author.email === author.author_email)
+      return authorData ? authorData.commits_count : 0
     })
     
     return {
@@ -965,7 +974,7 @@ const updateAuthorChart = () => {
   ;(authorChart.value as any).chart = chart
 }
 
-const updateCodeAddedChart = () => {
+const updateCodeAddedChart = async () => {
   if (!codeAddedChart.value || filteredAuthorStats.value.length === 0) return
 
   const ctx = codeAddedChart.value.getContext('2d')
@@ -987,7 +996,22 @@ const updateCodeAddedChart = () => {
 
   if (authorsToShow.length === 0) return
 
-  // Create synthetic daily data for each author based on their total contributions
+  // Fetch real daily author data
+  let dailyAuthorData: any[] = []
+  try {
+    const response = await api.get(`/repositories/${repoId}/stats/daily-authors`, {
+      params: { 
+        days: selectedDays.value,
+        exclude_ai: excludeAI.value
+      }
+    })
+    dailyAuthorData = response.data.daily_stats || []
+  } catch (error) {
+    console.error('Failed to fetch daily author data for chart:', error)
+    return
+  }
+
+  // Create date range for labels
   const dateRange: string[] = []
   for (let i = selectedDays.value - 1; i >= 0; i--) {
     const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
@@ -1001,7 +1025,7 @@ const updateCodeAddedChart = () => {
     })
   )
 
-  // Create datasets for each author
+  // Create datasets for each author using real daily data
   const datasets = authorsToShow.map((author, index) => {
     const colors = [
       'rgb(34, 197, 94)',    // green
@@ -1018,18 +1042,13 @@ const updateCodeAddedChart = () => {
     
     const color = colors[index % colors.length]
     
-    // Generate daily code added data (distributed across the period with some variation)
-    const dailyActivity = dateRange.map((_, dayIndex) => {
-      // Create realistic daily code added distribution
-      const totalAdded = author.added_lines
-      const dailyAverage = totalAdded / selectedDays.value
+    // Get real daily lines added data for this author
+    const dailyActivity = dateRange.map(date => {
+      const dayData = dailyAuthorData.find(d => d.date === date)
+      if (!dayData || !dayData.authors) return 0
       
-      // Add some variation - more activity in recent days and some randomness
-      const dayWeight = (selectedDays.value - dayIndex) / selectedDays.value
-      const randomVariation = 0.3 + Math.random() * 1.4 // 0.3 to 1.7x variation
-      const dailyValue = Math.max(0, Math.round(dailyAverage * dayWeight * randomVariation))
-      
-      return dailyValue
+      const authorData = dayData.authors.find((a: any) => a.author.email === author.author_email)
+      return authorData ? authorData.added_lines : 0
     })
     
     return {
