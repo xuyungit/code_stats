@@ -677,6 +677,13 @@ const fetchAiStats = async () => {
 const updateAiTrendsChart = () => {
   if (!aiTrendsChart.value || aiTrends.value.length === 0) return
   
+  // Check if canvas has proper dimensions
+  const rect = aiTrendsChart.value.getBoundingClientRect()
+  if (rect.width === 0 || rect.height === 0) {
+    setTimeout(() => updateAiTrendsChart(), 200)
+    return
+  }
+  
   const ctx = aiTrendsChart.value.getContext('2d')
   if (!ctx) return
   
@@ -858,13 +865,21 @@ const applyFilters = async () => {
 
   // Update charts
   await nextTick()
-  updateChart()
-  await updateAuthorChart()
-  await updateCodeAddedChart()
+  // Add delays to ensure containers are properly rendered
+  setTimeout(() => updateChart(), 100)
+  setTimeout(() => updateAuthorChart(), 150)
+  setTimeout(() => updateCodeAddedChart(), 200)
 }
 
 const updateChart = () => {
   if (!dailyChart.value || filteredDailyStats.value.length === 0) return
+
+  // Check if canvas has proper dimensions
+  const rect = dailyChart.value.getBoundingClientRect()
+  if (rect.width === 0 || rect.height === 0) {
+    setTimeout(() => updateChart(), 200)
+    return
+  }
 
   const ctx = dailyChart.value.getContext('2d')
   if (!ctx) return
@@ -1062,6 +1077,13 @@ const updateChart = () => {
 const updateAuthorChart = async () => {
   if (!authorChart.value || filteredAuthorStats.value.length === 0) return
 
+  // Check if canvas has proper dimensions
+  const rect = authorChart.value.getBoundingClientRect()
+  if (rect.width === 0 || rect.height === 0) {
+    setTimeout(() => updateAuthorChart(), 200)
+    return
+  }
+
   const ctx = authorChart.value.getContext('2d')
   if (!ctx) return
 
@@ -1244,6 +1266,13 @@ const updateAuthorChart = async () => {
 
 const updateCodeAddedChart = async () => {
   if (!codeAddedChart.value || filteredAuthorStats.value.length === 0) return
+
+  // Check if canvas has proper dimensions
+  const rect = codeAddedChart.value.getBoundingClientRect()
+  if (rect.width === 0 || rect.height === 0) {
+    setTimeout(() => updateCodeAddedChart(), 200)
+    return
+  }
 
   const ctx = codeAddedChart.value.getContext('2d')
   if (!ctx) return
