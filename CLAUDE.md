@@ -35,7 +35,7 @@ This repository contains a web-based service for analyzing git repository code a
 - **Rebase detection**: Uses git patch-id to track commits across rebases
 - **Commit deduplication**: Ensures commits appearing in multiple branches are counted only once
 
-### Web Service Features (MVP Complete)
+### Web Service Features
 - Multi-user support with JWT authentication
 - Repository management (add, update, delete repositories) 
 - Git analysis integration with job tracking
@@ -74,13 +74,12 @@ or use uv python to run python scripts
 ### Full-Stack Web Application
 
 Virtual environment is at .venv directory of the workspace
+usually you don't need to start development server, if you have, ask to confirm
 ```bash
 # Install dependencies and start development server
 uv sync
 uv run uvicorn backend.app.main:app --reload --port 8002
 
-# Access web application at http://localhost:8002
-# API documentation at http://localhost:8002/api/docs
 ```
 
 #### Technology Stack:
@@ -97,38 +96,7 @@ uv run uvicorn backend.app.main:app --reload --port 8002
 
 #### API Endpoints Available:
 
-**Core & Health:**
-- **GET** `/api/` - API info and version
-- **GET** `/api/health` - Health check
-
-**Authentication:**
-- **POST** `/api/auth/register` - Register new user
-- **POST** `/api/auth/login` - Login and get access token
-- **GET** `/api/auth/me` - Get current user info
-- **POST** `/api/auth/refresh` - Refresh access token
-
-**Repository Management:**
-- **GET** `/api/repositories/` - List user repositories
-- **POST** `/api/repositories/` - Create repository
-- **GET** `/api/repositories/{id}` - Get repository details
-- **PUT** `/api/repositories/{id}` - Update repository
-- **DELETE** `/api/repositories/{id}` - Delete repository
-- **GET** `/api/repositories/{id}/authors` - List repository authors
-- **PUT** `/api/repositories/authors/{author_id}` - Update author (AI flagging)
-
-**Single-Repository Statistics:**
-- **GET** `/api/repositories/{id}/stats/period` - Aggregated period stats
-- **GET** `/api/repositories/{id}/stats/daily` - Daily breakdown stats
-- **GET** `/api/repositories/{id}/stats/authors` - Author breakdown stats
-- **GET** `/api/repositories/{id}/stats/daily-authors` - Daily stats with author details
-
-**Analysis & Jobs:**
-- **POST** `/api/repositories/{id}/analyze` - Trigger git analysis
-- **GET** `/api/repositories/{id}/jobs` - List analysis jobs
-- **GET** `/api/repositories/{id}/jobs/{job_id}` - Get job details
-
-**Cross-Repository Statistics:**
-- **GET** `/api/stats/repo-daily` - Multi-repo daily stats with author breakdown
+refer to docs/api-endpoints.md
 
 ## Development Guidelines
 
@@ -137,50 +105,11 @@ uv run uvicorn backend.app.main:app --reload --port 8002
 - Follow day-based storage pattern - avoid storing aggregated or computed data
 - Use migration system for all database schema changes
 - Maintain user/author separation in data model
-- Use JWT authentication for API security
 - Write Pydantic schemas for request/response validation
 - Design APIs with date-indexed responses for frontend charting
 - Return minimal data references (e.g. author_id) to avoid response bloat
 - Support flexible filtering (repo scope, AI coder exclusion, date ranges)
 
-### Database Migrations
+### Database Migration Guides
 
-#### Best Practices (IMPORTANT - Follow these to avoid migration failures)
-1. **Order of Operations**: ALWAYS follow this sequence:
-   - Create migration file FIRST
-   - Apply migration to update database schema
-   - THEN update SQLAlchemy models to match
-   - Never update models before running migrations
-   
-2. **Migration File Format**:
-   - Use simple format: `{version}_{description}.sql` (e.g., `003_add_commit_patch_id.sql`)
-   - Keep SQL statements clean and simple
-   - Start with `-- UP` and `-- DOWN` markers only
-   - Avoid complex comments that might confuse the parser
-   
-3. **Migration Content Structure**:
-   ```sql
-   -- UP
-   ALTER TABLE commits ADD COLUMN patch_id VARCHAR(40);
-   CREATE INDEX idx_commits_patch_id ON commits(patch_id);
-   
-   -- DOWN
-   DROP INDEX idx_commits_patch_id;
-   ALTER TABLE commits DROP COLUMN patch_id;
-   ```
-
-4. **Testing and Verification**:
-   - Test migrations on a copy of the database first
-   - Verify schema changes with: `sqlite3 git_stats.db ".schema table_name"`
-   - Check migration status: `mm.get_applied_migrations()`
-   
-5. **Handling Migration Failures**:
-   - If a migration fails due to "column already exists", check if models were updated first
-   - Manually verify database state before proceeding
-   - May need to manually record migration as applied if schema already matches
-
-6. **Common Pitfalls to Avoid**:
-   - Don't update models before migrations
-   - Don't include descriptive comments in the SQL section
-   - Don't assume migrations will auto-retry on failure
-   - Always check for existing schema before adding columns
+refer to docs/database-migration-guides.md
