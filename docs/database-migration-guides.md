@@ -1,5 +1,9 @@
 # Database Migration Guides
 
+## Migration SQL
+
+backend/migrations
+
 ## Best Practices (IMPORTANT - Follow these to avoid migration failures)
 
 1. **Order of Operations**: ALWAYS follow this sequence:
