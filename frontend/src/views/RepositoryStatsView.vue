@@ -339,7 +339,7 @@
                         {{ (stat.added_lines - stat.deleted_lines > 0 ? '+' : '') + (stat.added_lines - stat.deleted_lines).toLocaleString() }}
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ stat.total_files_changed?.toLocaleString() || 'N/A' }}
+                        {{ stat.files_changed?.toLocaleString() || 'N/A' }}
                       </td>
                     </tr>
                     
@@ -538,7 +538,7 @@ interface PeriodStats {
   commits_count: number
   added_lines: number
   deleted_lines: number
-  total_files_changed: number
+  files_changed: number
   authors_count: number
 }
 
@@ -547,7 +547,7 @@ interface DailyStats {
   commits_count: number
   added_lines: number
   deleted_lines: number
-  total_files_changed: number
+  files_changed: number
   authors_count: number
 }
 
@@ -568,7 +568,7 @@ interface AuthorStats {
   commits_count: number
   added_lines: number
   deleted_lines: number
-  total_files_changed: number
+  files_changed: number
 }
 
 
@@ -1004,7 +1004,7 @@ const updateChart = () => {
               const actualDeleted = stat.deleted_lines
               const netChange = stat.added_lines - actualDeleted
               return [
-                `Files Changed: ${stat.total_files_changed || 'N/A'}`,
+                `Files Changed: ${stat.files_changed || 'N/A'}`,
                 `Net Change: ${netChange >= 0 ? '+' : ''}${netChange.toLocaleString()}`
               ]
             }
