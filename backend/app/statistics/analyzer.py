@@ -12,7 +12,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../../'))
 
 from git_utils import (
     validate_git_repository, get_commits_with_authors, get_commits_detailed,
-    get_commit_diff_stats, format_date_for_git, get_days_ago_date
+    get_commit_diff_stats, format_date_for_git, get_days_ago_date,
+    get_commit_patch_id
 )
 from stats_parser import (
     parse_commit_diff_stats, create_author_stats_dict,
@@ -20,6 +21,7 @@ from stats_parser import (
 )
 
 from ..core.models import Author, Repository, DailyAuthorStats, Commit, CommitCoAuthor
+from sqlalchemy import or_ as db_or_, and_ as db_and_
 
 
 class WebGitAnalyzer:
@@ -117,13 +119,23 @@ class WebGitAnalyzer:
             unique_authors = set()
             
             for commit_info in commits:
-                # Check if commit already exists
+                # Get patch-id for rebase detection
+                patch_id = get_commit_patch_id(self.repo_path, commit_info['hash'])
+                
+                # Check if commit already exists (by hash or patch-id)
                 existing_commit = self.db.query(Commit).filter(
                     Commit.repository_id == self.repository.id,
-                    Commit.hash == commit_info['hash']
+                    db_or_(
+                        Commit.hash == commit_info['hash'],
+                        db_and_(Commit.patch_id == patch_id, patch_id != None)
+                    )
                 ).first()
                 
                 if existing_commit:
+                    # If found by patch_id but different hash, update the hash (rebased commit)
+                    if existing_commit.hash != commit_info['hash'] and patch_id:
+                        existing_commit.hash = commit_info['hash']
+                        self.db.flush()
                     continue  # Skip already processed commits
                 
                 # Get diff stats for this commit
@@ -146,6 +158,7 @@ class WebGitAnalyzer:
                     repository_id=self.repository.id,
                     author_id=primary_author.id,
                     hash=commit_info['hash'],
+                    patch_id=patch_id,
                     message=commit_info['message'],
                     commit_datetime=commit_dt,
                     added_lines=added,

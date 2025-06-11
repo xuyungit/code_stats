@@ -80,6 +80,7 @@ class Commit(Base):
     repository_id = Column(Integer, ForeignKey("repositories.id"), nullable=False)
     author_id = Column(Integer, ForeignKey("authors.id"), nullable=False)
     hash = Column(String(40), nullable=False, index=True)  # Git commit hash
+    patch_id = Column(String(40), index=True)  # Patch ID for tracking across rebases
     message = Column(Text, nullable=False)
     commit_datetime = Column(DateTime(timezone=True), nullable=False)
     added_lines = Column(Integer, default=0)

@@ -31,6 +31,9 @@ This repository contains a web-based service for analyzing git repository code a
 - Daily breakdown of development statistics
 - Track commits, lines added/deleted, files changed, and net activity
 - Handle edge cases like empty repositories and initial commits
+- **Multi-branch analysis**: Analyzes all branches by default with automatic deduplication
+- **Rebase detection**: Uses git patch-id to track commits across rebases
+- **Commit deduplication**: Ensures commits appearing in multiple branches are counted only once
 
 ### Web Service Features (MVP Complete)
 - Multi-user support with JWT authentication
@@ -62,6 +65,11 @@ This repository contains a web-based service for analyzing git repository code a
 - Author ID references only in responses, frontend fetches author details separately
 
 ## Running Tools
+
+### Python env
+
+the venv of this project is at .venv sub-folder
+or use uv python to run python scripts
 
 ### Full-Stack Web Application
 
@@ -136,7 +144,43 @@ uv run uvicorn backend.app.main:app --reload --port 8002
 - Support flexible filtering (repo scope, AI coder exclusion, date ranges)
 
 ### Database Migrations
-- Create migration files in `backend/migrations/` with format `{version}_{description}.sql`
-- Include both UP and DOWN migration SQL
-- Test migrations before applying to production
-- Use migration manager for all schema changes
+
+#### Best Practices (IMPORTANT - Follow these to avoid migration failures)
+1. **Order of Operations**: ALWAYS follow this sequence:
+   - Create migration file FIRST
+   - Apply migration to update database schema
+   - THEN update SQLAlchemy models to match
+   - Never update models before running migrations
+   
+2. **Migration File Format**:
+   - Use simple format: `{version}_{description}.sql` (e.g., `003_add_commit_patch_id.sql`)
+   - Keep SQL statements clean and simple
+   - Start with `-- UP` and `-- DOWN` markers only
+   - Avoid complex comments that might confuse the parser
+   
+3. **Migration Content Structure**:
+   ```sql
+   -- UP
+   ALTER TABLE commits ADD COLUMN patch_id VARCHAR(40);
+   CREATE INDEX idx_commits_patch_id ON commits(patch_id);
+   
+   -- DOWN
+   DROP INDEX idx_commits_patch_id;
+   ALTER TABLE commits DROP COLUMN patch_id;
+   ```
+
+4. **Testing and Verification**:
+   - Test migrations on a copy of the database first
+   - Verify schema changes with: `sqlite3 git_stats.db ".schema table_name"`
+   - Check migration status: `mm.get_applied_migrations()`
+   
+5. **Handling Migration Failures**:
+   - If a migration fails due to "column already exists", check if models were updated first
+   - Manually verify database state before proceeding
+   - May need to manually record migration as applied if schema already matches
+
+6. **Common Pitfalls to Avoid**:
+   - Don't update models before migrations
+   - Don't include descriptive comments in the SQL section
+   - Don't assume migrations will auto-retry on failure
+   - Always check for existing schema before adding columns

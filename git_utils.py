@@ -53,7 +53,7 @@ def run_git_command(cmd: List[str], repo_path: str, check: bool = True) -> subpr
         raise GitError("git command not found. Is git installed and in your PATH?")
 
 
-def get_commits_in_period(repo_path: str, since_date: str, until_date: Optional[str] = None) -> List[str]:
+def get_commits_in_period(repo_path: str, since_date: str, until_date: Optional[str] = None, all_branches: bool = True) -> List[str]:
     """
     Gets commit hashes for a specific time period.
     
@@ -61,13 +61,17 @@ def get_commits_in_period(repo_path: str, since_date: str, until_date: Optional[
         repo_path: Path to the git repository
         since_date: Start date in YYYY-MM-DD format
         until_date: End date in YYYY-MM-DD format (optional)
+        all_branches: Whether to check all branches (default True)
         
     Returns:
-        List of commit hashes
+        List of unique commit hashes
     """
     cmd = ['git', 'log', f'--since={since_date}', '--pretty=format:%H']
     if until_date:
         cmd.append(f'--until={until_date}')
+    
+    if all_branches:
+        cmd.append('--all')  # Include all branches
     
     result = run_git_command(cmd, repo_path, check=False)
     
@@ -78,10 +82,12 @@ def get_commits_in_period(repo_path: str, since_date: str, until_date: Optional[
             raise GitError(f"Git log command failed: {result.stderr.strip()}")
     
     commit_hashes = result.stdout.strip().split('\n')
-    return [h for h in commit_hashes if h]  # Filter out empty strings
+    # Use a set to automatically deduplicate commits that appear in multiple branches
+    unique_hashes = list(dict.fromkeys(h for h in commit_hashes if h))  # Preserves order
+    return unique_hashes
 
 
-def get_commits_with_authors(repo_path: str, since_date: str, until_date: Optional[str] = None) -> List[dict]:
+def get_commits_with_authors(repo_path: str, since_date: str, until_date: Optional[str] = None, all_branches: bool = True) -> List[dict]:
     """
     Gets commits with author information for a specific time period.
     
@@ -89,6 +95,7 @@ def get_commits_with_authors(repo_path: str, since_date: str, until_date: Option
         repo_path: Path to the git repository
         since_date: Start date in YYYY-MM-DD format
         until_date: End date in YYYY-MM-DD format (optional)
+        all_branches: Whether to check all branches (default True)
         
     Returns:
         List of dictionaries with commit hash, author email, and author name
@@ -96,6 +103,9 @@ def get_commits_with_authors(repo_path: str, since_date: str, until_date: Option
     cmd = ['git', 'log', f'--since={since_date}', '--pretty=format:%H|%ae|%an']
     if until_date:
         cmd.append(f'--until={until_date}')
+    
+    if all_branches:
+        cmd.append('--all')  # Include all branches
     
     result = run_git_command(cmd, repo_path, check=False)
     
@@ -109,19 +119,21 @@ def get_commits_with_authors(repo_path: str, since_date: str, until_date: Option
         return []
     
     commits = []
+    seen_hashes = set()
     for line in result.stdout.strip().split('\n'):
         parts = line.split('|')
-        if len(parts) >= 3:
+        if len(parts) >= 3 and parts[0] not in seen_hashes:
             commits.append({
                 'hash': parts[0],
                 'author_email': parts[1],
                 'author_name': parts[2]
             })
+            seen_hashes.add(parts[0])
     
     return commits
 
 
-def get_commits_detailed(repo_path: str, since_date: str, until_date: Optional[str] = None) -> List[dict]:
+def get_commits_detailed(repo_path: str, since_date: str, until_date: Optional[str] = None, all_branches: bool = True) -> List[dict]:
     """
     Gets detailed commit information including message and datetime for a specific time period.
     
@@ -129,6 +141,7 @@ def get_commits_detailed(repo_path: str, since_date: str, until_date: Optional[s
         repo_path: Path to the git repository
         since_date: Start date in YYYY-MM-DD format
         until_date: End date in YYYY-MM-DD format (optional)
+        all_branches: Whether to check all branches (default True)
         
     Returns:
         List of dictionaries with commit hash, author email, author name, message, and datetime
@@ -138,6 +151,9 @@ def get_commits_detailed(repo_path: str, since_date: str, until_date: Optional[s
     if until_date:
         cmd.append(f'--until={until_date}')
     
+    if all_branches:
+        cmd.append('--all')  # Include all branches
+    
     result = run_git_command(cmd, repo_path, check=False)
     
     if result.returncode != 0:
@@ -150,6 +166,7 @@ def get_commits_detailed(repo_path: str, since_date: str, until_date: Optional[s
         return []
     
     commits = []
+    seen_hashes = set()
     # Split by commit separator
     commit_blocks = result.stdout.strip().split('|||COMMIT_END|||')
     
@@ -161,18 +178,20 @@ def get_commits_detailed(repo_path: str, since_date: str, until_date: Optional[s
         parts = block.strip().split('|||')
         if len(parts) >= 5:
             hash_val = parts[0]
-            author_email = parts[1] 
-            author_name = parts[2]
-            datetime_val = parts[3]
-            message = parts[4].strip() if len(parts) > 4 else ''
-            
-            commits.append({
-                'hash': hash_val,
-                'author_email': author_email,
-                'author_name': author_name,
-                'datetime': datetime_val,
-                'message': message
-            })
+            if hash_val not in seen_hashes:
+                author_email = parts[1] 
+                author_name = parts[2]
+                datetime_val = parts[3]
+                message = parts[4].strip() if len(parts) > 4 else ''
+                
+                commits.append({
+                    'hash': hash_val,
+                    'author_email': author_email,
+                    'author_name': author_name,
+                    'datetime': datetime_val,
+                    'message': message
+                })
+                seen_hashes.add(hash_val)
     
     return commits
 
@@ -272,6 +291,61 @@ def get_days_ago_date(days_ago: int) -> str:
         Date string in YYYY-MM-DD format
     """
     return (datetime.now() - timedelta(days=days_ago)).strftime('%Y-%m-%d')
+
+
+def get_commit_content_hash(repo_path: str, commit_hash: str) -> str:
+    """
+    Gets a content-based hash for a commit that remains stable across rebases.
+    This uses the commit's tree hash combined with author info and message.
+    
+    Args:
+        repo_path: Path to the git repository
+        commit_hash: The commit hash to analyze
+        
+    Returns:
+        A stable content hash for the commit
+    """
+    # Get tree hash, author, and subject (first line of message)
+    cmd = ['git', 'show', '--format=%T|%ae|%at|%s', '-s', commit_hash]
+    result = run_git_command(cmd, repo_path)
+    
+    if result.returncode == 0:
+        return result.stdout.strip()
+    return ""
+
+
+def get_commit_patch_id(repo_path: str, commit_hash: str) -> Optional[str]:
+    """
+    Gets the patch-id for a commit, which is stable across rebases.
+    The patch-id is a hash of the changes introduced by the commit.
+    
+    Args:
+        repo_path: Path to the git repository
+        commit_hash: The commit hash to analyze
+        
+    Returns:
+        The patch-id if successful, None otherwise
+    """
+    # Generate patch and compute patch-id
+    cmd1 = ['git', 'show', commit_hash]
+    cmd2 = ['git', 'patch-id', '--stable']
+    
+    try:
+        # Run first command
+        result1 = subprocess.run(cmd1, cwd=repo_path, capture_output=True, text=True)
+        if result1.returncode != 0:
+            return None
+            
+        # Pipe to second command
+        result2 = subprocess.run(cmd2, cwd=repo_path, input=result1.stdout, 
+                               capture_output=True, text=True)
+        if result2.returncode == 0 and result2.stdout:
+            # patch-id output format: "<patch-id> <commit-id>"
+            return result2.stdout.strip().split()[0]
+    except Exception:
+        pass
+    
+    return None
 
 
 # Git's empty tree hash for diffs against initial commits
