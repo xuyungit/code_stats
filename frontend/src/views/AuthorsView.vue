@@ -211,7 +211,7 @@
               <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                   <tr>
-                    <th @click="sortBy('author_name')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                    <th @click="sortBy('author_name')" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                       <div class="flex items-center space-x-1">
                         <span>Author</span>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -219,7 +219,7 @@
                         </svg>
                       </div>
                     </th>
-                    <th @click="sortBy('commits_count')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                    <th @click="sortBy('commits_count')" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                       <div class="flex items-center space-x-1">
                         <span>Commits</span>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,49 +227,49 @@
                         </svg>
                       </div>
                     </th>
-                    <th @click="sortBy('added_lines')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                    <th @click="sortBy('added_lines')" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                       <div class="flex items-center space-x-1">
-                        <span>Lines Added</span>
+                        <span>Added</span>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
                         </svg>
                       </div>
                     </th>
-                    <th @click="sortBy('deleted_lines')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                    <th @click="sortBy('deleted_lines')" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                       <div class="flex items-center space-x-1">
-                        <span>Lines Deleted</span>
+                        <span>Deleted</span>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
                         </svg>
                       </div>
                     </th>
-                    <th @click="sortBy('net_change')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                    <th @click="sortBy('net_change')" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                       <div class="flex items-center space-x-1">
-                        <span>Net Change</span>
+                        <span>Net</span>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
                         </svg>
                       </div>
                     </th>
-                    <th @click="sortBy('ai_lines_percentage')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                    <th @click="sortBy('ai_lines_percentage')" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                       <div class="flex items-center space-x-1">
-                        <span>AI Assistance</span>
+                        <span>AI %</span>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
                         </svg>
                       </div>
                     </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Active Repositories
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Repositories
                     </th>
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                   <tr v-for="author in sortedAuthors" :key="author.author_email" class="hover:bg-gray-50">
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-3 py-2 whitespace-nowrap">
                       <div class="flex items-center">
-                        <div class="flex-shrink-0 h-10 w-10">
-                          <div class="h-10 w-10 rounded-full flex items-center justify-center" :class="{
+                        <div class="flex-shrink-0 h-8 w-8">
+                          <div class="h-8 w-8 rounded-full flex items-center justify-center" :class="{
                             'bg-orange-200 text-orange-800': author.is_ai_coder,
                             'bg-gray-300 text-gray-700': !author.is_ai_coder
                           }">
@@ -278,7 +278,7 @@
                             </span>
                           </div>
                         </div>
-                        <div class="ml-4">
+                        <div class="ml-3">
                           <div class="flex items-center space-x-2">
                             <div class="text-sm font-medium text-gray-900">{{ author.author_name }}</div>
                             <span v-if="author.is_ai_coder" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
@@ -289,27 +289,27 @@
                         </div>
                       </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-3 py-2 whitespace-nowrap">
                       <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {{ author.commits_count }}
                       </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                    <td class="px-3 py-2 whitespace-nowrap text-sm text-green-600 font-medium">
                       +{{ author.added_lines.toLocaleString() }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">
+                    <td class="px-3 py-2 whitespace-nowrap text-sm text-red-600 font-medium">
                       -{{ author.deleted_lines.toLocaleString() }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :class="{
+                    <td class="px-3 py-2 whitespace-nowrap text-sm font-medium" :class="{
                       'text-green-600': author.net_change > 0,
                       'text-red-600': author.net_change < 0,
                       'text-gray-600': author.net_change === 0
                     }">
                       {{ (author.net_change > 0 ? '+' : '') + author.net_change.toLocaleString() }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="flex items-center space-x-2">
-                        <div class="flex-shrink-0 w-16 bg-gray-200 rounded-full h-2">
+                    <td class="px-3 py-2 whitespace-nowrap">
+                      <div class="flex items-center space-x-1">
+                        <div class="flex-shrink-0 w-12 bg-gray-200 rounded-full h-2">
                           <div 
                             class="h-2 rounded-full transition-all duration-300"
                             :class="{
@@ -330,13 +330,13 @@
                         </svg>
                       </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-3 py-2">
                       <div class="flex flex-wrap gap-1">
                         <RouterLink
                           v-for="repo in author.repositories"
                           :key="repo.id"
                           :to="`/repositories/${repo.id}/stats`"
-                          class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition-colors"
+                          class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition-colors"
                         >
                           {{ repo.name }}
                         </RouterLink>
