@@ -249,10 +249,23 @@
           </div>
 
           <!-- Overall Activity Trends Chart -->
-          <div v-if="dailyTrends.length > 0" class="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
+          <div class="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
             <h3 class="text-lg font-medium text-gray-900 mb-4">Cross-Repository Activity Trends</h3>
-            <div class="h-80">
+            <div v-if="dailyTrends.length > 0 && hasChartData" class="h-80">
               <canvas ref="trendsChart"></canvas>
+            </div>
+            <div v-else-if="dailyTrends.length > 0 && !hasChartData" class="h-80 flex items-center justify-center text-gray-500">
+              <div class="text-center">
+                <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                <p class="text-lg font-medium">No activity data</p>
+                <p class="text-sm mt-1">No commit activity found for the last {{ selectedDays }} days</p>
+                <p class="text-xs mt-2 text-gray-400">Try a shorter time period or ensure your repositories have been analyzed</p>
+              </div>
+            </div>
+            <div v-else class="h-80 flex items-center justify-center">
+              <div class="text-gray-500">Loading chart data...</div>
             </div>
           </div>
 
@@ -475,6 +488,16 @@ const aiTrendChange = ref(0)
 const netChange = computed(() => {
   if (!overallStats.value) return 0
   return overallStats.value.total_added - overallStats.value.total_deleted
+})
+
+const hasChartData = computed(() => {
+  if (!dailyTrends.value || dailyTrends.value.length === 0) return false
+  
+  // Check if there's any actual data (non-zero values)
+  return dailyTrends.value.some(trend => 
+    trend.daily_stats && trend.daily_stats.length > 0 && 
+    trend.daily_stats.some(stat => stat.commits_count > 0 || stat.added_lines > 0 || stat.deleted_lines > 0)
+  )
 })
 
 const formatDate = (dateString: string) => {
@@ -851,7 +874,7 @@ const fetchOverallStats = async () => {
 }
 
 const updateTrendsChart = () => {
-  if (!trendsChart.value || dailyTrends.value.length === 0) return
+  if (!trendsChart.value || dailyTrends.value.length === 0 || !hasChartData.value) return
   
   // Check if canvas has proper dimensions
   const rect = trendsChart.value.getBoundingClientRect()
@@ -885,6 +908,7 @@ const updateTrendsChart = () => {
   const dailyDeleted = dailyTrends.value.map(trend => 
     trend.daily_stats.reduce((sum, stat) => sum + Math.abs(stat.deleted_lines), 0)
   )
+  
   
   const chart = new ChartJS(ctx, {
     type: 'line',
