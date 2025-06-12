@@ -45,13 +45,7 @@ async def get_period_statistics(
     
     stats_service = StatisticsService(db)
     
-    # Check if we have data for this period
-    if not stats_service.has_data_for_period(repo_id, days):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No statistics data found for the last {days} days. Please run analysis first."
-        )
-    
+    # Return data even if empty - let the service handle empty data gracefully
     return stats_service.get_period_stats(repo_id, days, exclude_ai)
 
 
@@ -67,13 +61,7 @@ async def get_daily_statistics(
     
     stats_service = StatisticsService(db)
     
-    # Check if we have data for this period
-    if not stats_service.has_data_for_period(repo_id, days):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No statistics data found for the last {days} days. Please run analysis first."
-        )
-    
+    # Return data even if empty - let the service handle empty data gracefully
     return stats_service.get_daily_breakdown(repo_id, days)
 
 
@@ -90,13 +78,7 @@ async def get_author_statistics(
     
     stats_service = StatisticsService(db)
     
-    # Check if we have data for this period
-    if not stats_service.has_data_for_period(repo_id, days):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No statistics data found for the last {days} days. Please run analysis first."
-        )
-    
+    # Return data even if empty - let the service handle empty data gracefully
     return stats_service.get_author_stats(repo_id, days, exclude_ai)
 
 
@@ -113,13 +95,7 @@ async def get_daily_author_statistics(
     
     stats_service = StatisticsService(db)
     
-    # Check if we have data for this period
-    if not stats_service.has_data_for_period(repo_id, days):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No statistics data found for the last {days} days. Please run analysis first."
-        )
-    
+    # Return data even if empty - let the service handle empty data gracefully
     return stats_service.get_daily_author_breakdown(repo_id, days, exclude_ai)
 
 

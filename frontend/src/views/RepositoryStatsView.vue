@@ -62,6 +62,57 @@
           {{ error }}
         </div>
 
+        <!-- No Data State -->
+        <div v-else-if="hasNoData" class="text-center py-12">
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-8 max-w-md mx-auto">
+            <div class="flex flex-col items-center">
+              <!-- Icon -->
+              <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+              </div>
+              
+              <!-- Message -->
+              <h3 class="text-lg font-medium text-gray-900 mb-2">No Statistics Data Available</h3>
+              <p class="text-gray-600 mb-6 text-center">
+                This repository doesn't have any statistics data for the selected time period. 
+                Please run an analysis to generate statistics.
+              </p>
+              
+              <!-- Success Message -->
+              <div v-if="showAnalysisSuccess" class="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded mb-4 w-full">
+                <div class="flex items-center">
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  Analysis completed successfully! Refreshing data...
+                </div>
+              </div>
+              
+              <!-- Analysis Button -->
+              <button
+                @click="triggerAnalysis"
+                :disabled="analysisInProgress"
+                class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg v-if="analysisInProgress" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <svg v-else class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                {{ analysisInProgress ? 'Analyzing Repository...' : 'Start Analysis' }}
+              </button>
+              
+              <p class="text-xs text-gray-500 mt-3">
+                Analysis will scan the last {{ selectedDays }} days of commit history
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- Statistics Content -->
         <div v-else class="space-y-8">
           <!-- Period Summary -->
@@ -584,6 +635,9 @@ const dailyStats = ref<DailyStats[]>([])
 const authorStats = ref<AuthorStats[]>([])
 const filteredDailyStats = ref<DailyStats[]>([])
 const filteredAuthorStats = ref<AuthorStats[]>([])
+const hasNoData = ref(false)
+const analysisInProgress = ref(false)
+const showAnalysisSuccess = ref(false)
 const dailyChart = ref<HTMLCanvasElement>()
 const authorChart = ref<HTMLCanvasElement>()
 const codeAddedChart = ref<HTMLCanvasElement>()
@@ -611,6 +665,9 @@ const fetchRepository = async () => {
 
 const fetchStats = async () => {
   try {
+    hasNoData.value = false
+    showAnalysisSuccess.value = false
+    
     // Fetch period stats
     const periodResponse = await api.get(`/repositories/${repoId}/stats/period`, {
       params: { 
@@ -638,13 +695,43 @@ const fetchStats = async () => {
     })
     authorStats.value = authorResponse.data.authors || authorResponse.data
 
+    // Check if we have any meaningful data
+    const hasAnyData = (
+      (periodStats.value && periodStats.value.commits_count > 0) ||
+      (dailyStats.value && dailyStats.value.length > 0 && dailyStats.value.some(day => day.commits_count > 0)) ||
+      (authorStats.value && authorStats.value.length > 0)
+    )
+    
+    if (!hasAnyData) {
+      hasNoData.value = true
+      return
+    }
+
     // Apply filters and update chart
     applyFilters()
     
     // Fetch AI statistics
     await fetchAiStats()
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to fetch statistics:', err)
+    
+    // Check if this is a 404 error due to missing data (for backward compatibility)
+    if (err.response?.status === 404) {
+      const errorMessage = err.response?.data?.detail || ''
+      if (errorMessage.includes('No statistics data found') || errorMessage.includes('Please run analysis first')) {
+        hasNoData.value = true
+        // Clear any existing data
+        periodStats.value = null
+        dailyStats.value = []
+        authorStats.value = []
+        filteredDailyStats.value = []
+        filteredAuthorStats.value = []
+        return
+      }
+    }
+    
+    // For other errors, show the generic error message
+    // The error will be handled by the global error state
   }
 }
 
@@ -669,8 +756,17 @@ const fetchAiStats = async () => {
       await nextTick()
       updateAiTrendsChart()
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to fetch AI statistics:', err)
+    
+    // Don't show error for AI stats if it's a 404 - AI stats are optional
+    // and might not be available for all repositories
+    if (err.response?.status === 404) {
+      // Clear AI stats but don't show an error - AI stats are optional
+      aiStats.value = null
+      aiAuthorStats.value = []
+      aiTrends.value = []
+    }
   }
 }
 
@@ -1536,6 +1632,32 @@ const isRowExpanded = (date: string) => {
 
 const getAuthorDetailsForDate = (date: string): DailyAuthorDetail[] => {
   return dailyAuthorDetails.value.get(date) || []
+}
+
+const triggerAnalysis = async () => {
+  try {
+    analysisInProgress.value = true
+    showAnalysisSuccess.value = false
+    
+    const response = await api.post(`/repositories/${repoId}/analyze`, {
+      days: selectedDays.value
+    })
+    
+    if (response.status === 200) {
+      showAnalysisSuccess.value = true
+      
+      // Wait a moment for analysis to complete, then reload stats
+      setTimeout(async () => {
+        await fetchStats()
+        showAnalysisSuccess.value = false
+      }, 3000)
+    }
+  } catch (err: any) {
+    console.error('Failed to trigger analysis:', err)
+    error.value = err.response?.data?.detail || 'Failed to start analysis'
+  } finally {
+    analysisInProgress.value = false
+  }
 }
 
 onMounted(async () => {
