@@ -13,7 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../../'))
 from git_utils import (
     validate_git_repository, get_commits_with_authors, get_commits_detailed,
     get_commit_diff_stats, format_date_for_git, get_days_ago_date,
-    get_commit_patch_id
+    get_commit_patch_id, git_fetch
 )
 from stats_parser import (
     parse_commit_diff_stats, create_author_stats_dict,
@@ -21,6 +21,7 @@ from stats_parser import (
 )
 
 from ..core.models import Author, Repository, DailyAuthorStats, Commit, CommitCoAuthor
+from ..core.config import settings
 from sqlalchemy import or_ as db_or_, and_ as db_and_
 
 
@@ -293,17 +294,31 @@ class WebGitAnalyzer:
                 )
                 self.db.add(daily_stat)
     
-    def analyze_date_range(self, start_date: date, end_date: date) -> List[Dict]:
+    def analyze_date_range(self, start_date: date, end_date: date, auto_fetch: Optional[bool] = None) -> List[Dict]:
         """
         Analyze git statistics for a date range.
         
         Args:
             start_date: Start date (inclusive)
             end_date: End date (inclusive)
+            auto_fetch: Whether to fetch from remote before analysis (None uses config default)
             
         Returns:
             List of daily analysis results
         """
+        # Use config default if not specified
+        if auto_fetch is None:
+            auto_fetch = settings.auto_fetch_before_analysis
+        
+        # Fetch latest changes from remote if enabled
+        if auto_fetch:
+            print(f"Fetching latest changes for repository: {self.repository.name}")
+            fetch_success = git_fetch(self.repo_path, timeout=settings.git_fetch_timeout)
+            if fetch_success:
+                print("Successfully fetched latest changes from remote")
+            else:
+                print("Warning: Failed to fetch from remote, continuing with local data")
+        
         results = []
         current_date = start_date
         
@@ -322,17 +337,31 @@ class WebGitAnalyzer:
         
         return results
     
-    def analyze_recent_days(self, days: int) -> List[Dict]:
+    def analyze_recent_days(self, days: int, auto_fetch: Optional[bool] = None) -> List[Dict]:
         """
         Analyze recent N days.
         
         Args:
             days: Number of recent days to analyze
+            auto_fetch: Whether to fetch from remote before analysis (None uses config default)
             
         Returns:
             List of daily analysis results
         """
+        # Use config default if not specified
+        if auto_fetch is None:
+            auto_fetch = settings.auto_fetch_before_analysis
+        
+        # Fetch latest changes from remote if enabled
+        if auto_fetch:
+            print(f"Fetching latest changes for repository: {self.repository.name}")
+            fetch_success = git_fetch(self.repo_path)
+            if fetch_success:
+                print("Successfully fetched latest changes from remote")
+            else:
+                print("Warning: Failed to fetch from remote, continuing with local data")
+        
         end_date = date.today()
         start_date = end_date - timedelta(days=days-1)  # Include today
         
-        return self.analyze_date_range(start_date, end_date)
+        return self.analyze_date_range(start_date, end_date, auto_fetch)

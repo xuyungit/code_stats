@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     # Development
     debug: bool = True
     
+    # Git Analysis
+    auto_fetch_before_analysis: bool = True
+    git_fetch_timeout: int = 300  # 5 minutes timeout for git fetch operations
+    
     class Config:
         env_file = ".env"
 

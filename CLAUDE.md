@@ -69,7 +69,7 @@ This repository contains a web-based service for analyzing git repository code a
 ### Python env
 
 the venv of this project is at .venv sub-folder
-or use uv python to run python scripts
+or use `uv run python xxx` to run python scripts
 
 ### Full-Stack Web Application
 

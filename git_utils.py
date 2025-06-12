@@ -348,5 +348,61 @@ def get_commit_patch_id(repo_path: str, commit_hash: str) -> Optional[str]:
     return None
 
 
+def git_fetch(repo_path: str, remote: str = None, timeout: int = 300) -> bool:
+    """
+    Fetches latest changes from remote repository.
+    
+    Args:
+        repo_path: Path to the git repository
+        remote: Specific remote to fetch from (None for all remotes)
+        timeout: Timeout in seconds for the fetch operation (default 5 minutes)
+        
+    Returns:
+        True if fetch succeeded, False otherwise
+        
+    Note:
+        This function is designed to fail gracefully - analysis can continue
+        with local data if fetch fails.
+    """
+    validate_git_repository(repo_path)
+    
+    # Build fetch command
+    cmd = ['git', 'fetch']
+    if remote:
+        cmd.append(remote)
+    else:
+        # Fetch all remotes
+        cmd.append('--all')
+    
+    # Add progress flag for better UX
+    cmd.append('--progress')
+    
+    try:
+        # Run with timeout
+        result = subprocess.run(
+            cmd, 
+            cwd=repo_path, 
+            capture_output=True, 
+            text=True, 
+            timeout=timeout,
+            check=False
+        )
+        
+        if result.returncode == 0:
+            return True
+        else:
+            # Log the error but don't raise - allow analysis to continue
+            error_msg = result.stderr.strip() or result.stdout.strip()
+            print(f"Git fetch warning: {error_msg}")
+            return False
+            
+    except subprocess.TimeoutExpired:
+        print(f"Git fetch timed out after {timeout} seconds")
+        return False
+    except Exception as e:
+        print(f"Git fetch error: {str(e)}")
+        return False
+
+
 # Git's empty tree hash for diffs against initial commits
 EMPTY_TREE_HASH = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
